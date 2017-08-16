@@ -12,6 +12,7 @@
 	<modules>
 		<module>prototype-core</module>
 		<module>prototype-web</module>
+		<module>prototype-demo</module>
 	</modules>
 	<dependencyManagement>
 		<dependencies>
