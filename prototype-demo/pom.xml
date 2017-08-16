@@ -14,5 +14,10 @@
 			<artifactId>prototype-web</artifactId>
 			<version>${project.version}</version>
 		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-devtools</artifactId>
+			<scope>test</scope>
+		</dependency>
 	</dependencies>
 </project>

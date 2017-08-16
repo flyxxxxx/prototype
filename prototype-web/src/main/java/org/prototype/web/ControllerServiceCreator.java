@@ -229,7 +229,7 @@ public class ControllerServiceCreator implements ApiCreator<Class<?>>, BeanFacto
 			HttpServletRequest request = (HttpServletRequest) args[0];
 			String version = request.getHeader(API_VERSION);
 			if (version == null) {// 获取版本号
-				version = request.getParameter(version);
+				version = request.getParameter(API_VERSION);
 			}
 			RequestMapping route = chain.getMethod().getAnnotation(RequestMapping.class);
 			String lastVersion = executor.findService(route.value()[0], version).getDefine().version().replace('.',
@@ -237,7 +237,6 @@ public class ControllerServiceCreator implements ApiCreator<Class<?>>, BeanFacto
 			String uri = request.getRequestURI();
 			int k = uri.indexOf('.');
 			uri = k == -1 ? (uri + '/' + lastVersion) : (uri.substring(0, k) + '/' + lastVersion + uri.substring(k));
-			System.out.println(uri);
 			request.getRequestDispatcher(uri).forward(request, (ServletResponse) args[1]);// 重定向
 			return null;
 		}
@@ -595,8 +594,6 @@ public class ControllerServiceCreator implements ApiCreator<Class<?>>, BeanFacto
 				mp.type = property.getType();
 				mp.annotations = property.getField().getAnnotations();
 				mp.name = (prefix.length() == 0 ? "" : (prefix + ".")) + property.getName();
-				System.out.println(
-						type.getName() + "-------" + prefix + "---------" + mp.name + " : " + property.getType());
 				params.add(mp);
 			}
 		}

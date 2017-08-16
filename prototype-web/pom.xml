@@ -31,7 +31,7 @@
 			<scope>test</scope>
 		</dependency>
 		<dependency>
-			<groupId>com.zenking.prototype</groupId>
+			<groupId>org.prototype</groupId>
 			<artifactId>prototype-core</artifactId>	
 			<version>${project.version}</version>
 		</dependency>

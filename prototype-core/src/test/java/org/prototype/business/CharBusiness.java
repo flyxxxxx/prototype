@@ -76,11 +76,6 @@ public class CharBusiness extends Business implements DataTest {
 	public void checkJavaApi(Service service,Class<?> implementType) throws Exception{
 		Method method=implementType.getMethod("charBusiness", service.getParamType());
 		Assert.assertEquals(service.getResultType(), method.getReturnType());
-		for(Method m:implementType.getDeclaredMethods()){
-			if("charBusiness".equals(m.getName())){
-				System.out.println(m);
-			}
-		}
 		method=implementType.getMethod("charBusiness",String.class,String.class);
 		Assert.assertEquals(service.getResultType(), method.getReturnType());
 	}

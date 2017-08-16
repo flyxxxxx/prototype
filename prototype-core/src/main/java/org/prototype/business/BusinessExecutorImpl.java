@@ -1,5 +1,7 @@
 package org.prototype.business;
 
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
+
 import java.lang.annotation.Annotation;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
@@ -416,11 +418,15 @@ public class BusinessExecutorImpl implements BusinessExecutor {
 		if (version == null) {
 			return services.get(0);
 		}
+		int m=0;
 		for (Service service : services) {
 			int k = comparator.compareVersion(version, service.getDefine().version());
-			if (k <= 0) {
+			if(k==0){
 				return service;
+			}else if (k < 0) {
+				return m==0?service:services.get(m);
 			}
+			m++;
 		}
 		return services.get(services.size() - 1);
 	}
@@ -455,7 +461,7 @@ public class BusinessExecutorImpl implements BusinessExecutor {
 				} else {
 					t = v2[i].compareTo(v1[i]);
 				}
-				if (t < 0) {
+				if (t != 0) {
 					return t;
 				}
 			}
