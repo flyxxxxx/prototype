@@ -25,7 +25,6 @@ import org.prototype.PrototypeConfig.Api;
 import org.prototype.PrototypeInitializer;
 import org.prototype.business.ApiCreator;
 import org.prototype.business.BusinessExecutor;
-import org.prototype.business.IteratorBuilder;
 import org.prototype.business.Service;
 import org.prototype.business.ServiceDefine;
 import org.prototype.business.View;
@@ -62,7 +61,6 @@ import org.springframework.web.servlet.ModelAndView;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import io.swagger.annotations.ApiOperation;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -106,6 +104,9 @@ public class ControllerServiceCreator implements ApiCreator<Class<?>>, BeanFacto
 
 	private List<String> apiTypes = new ArrayList<>();
 
+	private Class<? extends Annotation> swaggerApi;
+
+	@SuppressWarnings("unchecked")
 	@PostConstruct
 	void init() {
 		async = initializer.getBootClass().getAnnotation(EnableAsync.class) != null;
@@ -122,6 +123,12 @@ public class ControllerServiceCreator implements ApiCreator<Class<?>>, BeanFacto
 			if (api != null && Boolean.TRUE.equals(api.getEnable())) {
 				apiTypes.add(creator.getType());
 			}
+		}
+		try {
+			swaggerApi = (Class<? extends Annotation>) Thread.currentThread().getContextClassLoader()
+					.loadClass("io.swagger.annotations.ApiOperation");
+		} catch (ClassNotFoundException e) {
+			log.info("Swagger UI disabled");
 		}
 	}
 
@@ -425,8 +432,10 @@ public class ControllerServiceCreator implements ApiCreator<Class<?>>, BeanFacto
 			mb.getAnnotationBuilder(RequestMapping.class).setAttribute("value", new String[] { url })
 					.setAttribute("method", methods.toArray(new RequestMethod[methods.size()]));
 			ServiceDefine define = service.getDefine();
-			mb.getAnnotationBuilder(ApiOperation.class).setAttribute("value", "Version router : " + define.value())
-					.setAttribute("notes", define.hint());
+			if (swaggerApi != null) {
+				mb.getAnnotationBuilder(swaggerApi).setAttribute("value", "Version router : " + define.value())
+						.setAttribute("notes", define.hint());
+			}
 			mb.create();
 		}
 
@@ -448,15 +457,17 @@ public class ControllerServiceCreator implements ApiCreator<Class<?>>, BeanFacto
 			mb.getParameterAnnotationsBuilder().getAnnotationBuilder(0, RequestParam.class)[0].setAttribute("name",
 					config.getApiParameterName());
 			ServiceDefine define = service.getDefine();
-			mb.getAnnotationBuilder(ApiOperation.class).setAttribute("value", "API : " + define.value())
-					.setAttribute("hidden", true);
+			if (swaggerApi != null) {
+				mb.getAnnotationBuilder(swaggerApi).setAttribute("value", "API : " + define.value())
+						.setAttribute("hidden", true);
+			}
 			mb.create();
 		}
 
 		@SuppressWarnings("unchecked")
 		private void buildMethod(Service service, String version) {
 			Class<? extends Throwable>[] throwableTypes = (Class<? extends Throwable>[]) new Class<?>[] {};
-			boolean requestBody = hasPojoProperty(service.getParamType(),true);
+			boolean requestBody = hasPojoProperty(service.getParamType(), true);
 			MethodParameter[] mps = getParameters(service, requestBody);
 			Class<?>[] parameterTypes = getParameterTypes(mps);
 			List<Property> views = ClassUtils.findProperty(service.getType(), View.class);
@@ -512,11 +523,13 @@ public class ControllerServiceCreator implements ApiCreator<Class<?>>, BeanFacto
 					.setAttribute("params", mapping.params()).setAttribute("headers", mapping.headers())
 					.setAttribute("consumes", mapping.consumes()).setAttribute("produces", mapping.produces());
 			ServiceDefine define = service.getDefine();
-			mb.getAnnotationBuilder(ApiOperation.class).setAttribute("value", define.value())
-					.setAttribute("notes", define.hint()).setAttribute("httpMethod", mapping.method()[0].name())
-					.setAttribute("response", (hasView || eventSource) ? String.class : service.getResultType())
-					.setAttribute("produces", getArrayValue(mapping.produces()))
-					.setAttribute("consumes", getArrayValue(mapping.consumes()));
+			if (swaggerApi != null) {
+				mb.getAnnotationBuilder(swaggerApi).setAttribute("value", define.value())
+						.setAttribute("notes", define.hint()).setAttribute("httpMethod", mapping.method()[0].name())
+						.setAttribute("response", (hasView || eventSource) ? String.class : service.getResultType())
+						.setAttribute("produces", getArrayValue(mapping.produces()))
+						.setAttribute("consumes", getArrayValue(mapping.consumes()));
+			}
 			if (!hasView) {
 				mb.getAnnotationBuilder(ResponseBody.class);
 			}
@@ -572,7 +585,7 @@ public class ControllerServiceCreator implements ApiCreator<Class<?>>, BeanFacto
 			Collection<Property> properties = ClassUtils.properties(type).values();
 			if (properties.size() == 1 && prefix.length() == 0) {
 				Property property = properties.iterator().next();
-				if (hasPojoProperty(property.getType(),true)) {// TODO
+				if (hasPojoProperty(property.getType(), true)) {// TODO
 					addParameters(params, property.getType(), property.getName());
 					return;
 				}
@@ -609,18 +622,18 @@ public class ControllerServiceCreator implements ApiCreator<Class<?>>, BeanFacto
 			}
 		}
 
-		private boolean hasPojoProperty(Class<?> type,boolean paramType) {
+		private boolean hasPojoProperty(Class<?> type, boolean paramType) {
 			if (type == null) {
 				return false;
 			}
 			Collection<Property> properties = ClassUtils.properties(type).values();
-			if(properties.size() == 1&&paramType){
-				return hasPojoProperty(type,false);
+			if (properties.size() == 1 && paramType) {
+				return hasPojoProperty(type, false);
 			}
-			boolean component=false;
+			boolean component = false;
 			for (Property property : properties) {
-				if(isComponent(property)){
-					
+				if (isComponent(property)) {
+
 				}
 			}
 			return false;

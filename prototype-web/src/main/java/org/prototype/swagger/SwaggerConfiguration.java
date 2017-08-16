@@ -1,5 +1,6 @@
 package org.prototype.swagger;
 
+import org.prototype.core.ConditionalHasClass;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -15,6 +16,7 @@ import springfox.documentation.swagger2.annotations.EnableSwagger2;
 
 @EnableSwagger2
 @Configuration
+@ConditionalHasClass(ApiInfoBuilder.class)
 public class SwaggerConfiguration {
 
 	@Value("${local.server.port:${server.port:8080}}")
