@@ -63,14 +63,15 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import lombok.extern.slf4j.Slf4j;
 
+/**
+ * 控制器服务创建实现. <br>
+ * 
+ * @author lj
+ *
+ */
 @Slf4j
 @Component
 public class ControllerServiceCreator implements ApiCreator<Class<?>>, BeanFactoryAware {
-
-	/**
-	 * API版本参数名（HTTP header或parameter）
-	 */
-	public static final String API_VERSION = "api-version";
 
 	/**
 	 * 接口类型值
@@ -227,9 +228,9 @@ public class ControllerServiceCreator implements ApiCreator<Class<?>>, BeanFacto
 		@Override
 		public Object doFilter(Object[] args, MethodChain chain) throws Exception {
 			HttpServletRequest request = (HttpServletRequest) args[0];
-			String version = request.getHeader(API_VERSION);
+			String version = request.getHeader(config.getVersionParameterName());
 			if (version == null) {// 获取版本号
-				version = request.getParameter(API_VERSION);
+				version = request.getParameter(config.getVersionParameterName());
 			}
 			RequestMapping route = chain.getMethod().getAnnotation(RequestMapping.class);
 			String lastVersion = executor.findService(route.value()[0], version).getDefine().version().replace('.',

@@ -50,6 +50,13 @@ import lombok.extern.slf4j.Slf4j;
 public class PrototypeConfig {
 
 	/**
+	 * WEB应用下版本HTTP请求版本参数名（或Header参数名）
+	 */
+	@Getter
+	@Setter
+	private String versionParameterName="api-version";
+
+	/**
 	 * 当前服务器的地址，默认为http://localhost:8080
 	 */
 	@Getter
