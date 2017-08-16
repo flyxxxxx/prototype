@@ -272,7 +272,7 @@ public class ControllerServiceCreator implements ApiCreator<Class<?>>, BeanFacto
 			if (async) {
 				DeferredResult<Object> deferredResult = new DeferredResult<>();
 				executor.submit(service.getType(), parameters).whenCompleteAsync((result, throwable) -> {
-					deferredResult.setResult(result);
+					deferredResult.setResult(result);//TODO 异步的初始化未解决
 				});
 				return deferredResult;
 			}
@@ -280,7 +280,7 @@ public class ControllerServiceCreator implements ApiCreator<Class<?>>, BeanFacto
 		}
 
 		private Object[] getParameters(Object[] args, Parameter[] parameters) throws Exception {
-			if (requestBody) {
+			if (requestBody||service.getParamType()==null) {
 				return args;
 			}
 			Object rs = service.getParamType().newInstance();
@@ -330,18 +330,22 @@ public class ControllerServiceCreator implements ApiCreator<Class<?>>, BeanFacto
 				return prop.getType().newInstance();
 			}
 		}
+		
+		private Object getViewResult(HttpPrototypeStatus status,Object rs){
+			if (view != null) {
+				return getView(status, rs);
+			} else if (eventSource) {
+				return getEventSourceResult(rs);
+			}
+			return rs;
+		}
 
 		private Object execute(Object[] args) {
 			HttpPrototypeStatus status = new HttpPrototypeStatus();
 			HttpPrototypeStatus.setStatus(status);
 			try {
 				Object rs = executor.execute(service.getType(), args);
-				if (view != null) {
-					return getView(status, rs);
-				} else if (eventSource) {
-					return getEventSourceResult(rs);
-				}
-				return rs;
+				return getViewResult(status,rs);
 			} finally {
 				if (log.isDebugEnabled()) {
 					try {

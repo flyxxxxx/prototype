@@ -2,8 +2,6 @@ package org.prototype.demo;
 
 import java.lang.reflect.InvocationTargetException;
 import java.sql.SQLException;
-import java.util.Locale;
-
 import org.prototype.annotation.Catch;
 import org.prototype.annotation.Msg;
 import org.prototype.business.BusinessDefine;
@@ -11,6 +9,7 @@ import org.prototype.business.BusinessMethod;
 import org.prototype.business.ExecuteChain;
 import org.prototype.business.Output;
 import org.prototype.business.Prop;
+import org.prototype.core.PrototypeStatus;
 import org.springframework.context.MessageSource;
 
 import lombok.extern.slf4j.Slf4j;
@@ -70,7 +69,7 @@ public class Business {
 	 */
 	protected final void end(MessageSource source) {
 		if (reason != null && result < 0) {
-			source.getMessage("error." + result, new Object[0], "UNKNOW ERROR", Locale.getDefault());
+			source.getMessage("error." + result, new Object[0], "UNKNOW ERROR", PrototypeStatus.getStatus().getLocale());
 		}
 	}
 

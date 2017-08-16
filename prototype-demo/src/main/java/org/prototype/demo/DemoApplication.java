@@ -12,7 +12,7 @@ import org.springframework.scheduling.annotation.EnableAsync;
  */
 @EnablePrototype
 @SpringBootApplication
-@EnableAsync
+//@EnableAsync
 public class DemoApplication {
 
 	public static void main(String[] args) {
