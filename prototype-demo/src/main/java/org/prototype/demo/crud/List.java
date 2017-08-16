@@ -1,4 +1,4 @@
-package org.prototype.demo.user;
+package org.prototype.demo.crud;
 
 import java.sql.Connection;
 import java.util.Collection;
@@ -9,7 +9,7 @@ import org.prototype.business.Prop;
 import org.prototype.business.ServiceDefine;
 import org.prototype.sql.PreparedSql;
 import org.prototype.sql.SQLBuilder;
-import org.prototype.web.Business;
+import org.prototype.demo.Business;
 import org.springframework.web.bind.annotation.RequestMapping;
 
 import lombok.extern.slf4j.Slf4j;

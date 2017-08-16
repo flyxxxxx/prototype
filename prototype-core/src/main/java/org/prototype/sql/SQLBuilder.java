@@ -83,7 +83,7 @@ public class SQLBuilder {
 	 */
 	public SQLBuilder append(Object param, String snippet) {
 		Assert.notNull(param);
-		builder.append(param);
+		params.add(param);
 		return append(snippet);
 	}
 
