@@ -1,5 +1,7 @@
 package org.prototype.demo.user;
 
+import java.sql.Connection;
+
 import org.prototype.business.Input;
 import org.prototype.business.Prop;
 import org.prototype.business.ServiceDefine;
@@ -18,13 +20,14 @@ public class Update extends Business {
 			@Prop(name = "name", desc = "姓名", maxLength = 20) })
 	private User user;
 
-	void business() {
+	void business(Connection connection) {
 		SQLBuilder builder = new SQLBuilder("update common_user set name=? where id=?");
 		builder.appendParam(user.getName(), user.getId());
+		update(connection, builder);
 	}
 
 	@PreparedSql(type = StatementType.UPDATE)
-	void update(SQLBuilder builder) {
+	void update(Connection connection,SQLBuilder builder) {
 		// do nothing
 	}
 

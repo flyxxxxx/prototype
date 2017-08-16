@@ -176,7 +176,7 @@ public class SQLBuilder {
 	 * @return 当前对象
 	 */
 	public SQLBuilder appendParam(Object... param) {
-		params.add(Arrays.asList(param));
+		params.addAll(Arrays.asList(param));
 		return this;
 	}
 

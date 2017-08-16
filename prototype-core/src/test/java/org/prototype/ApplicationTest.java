@@ -40,7 +40,6 @@ import org.prototype.demo.ParameterInjectBusiness;
 import org.prototype.demo.SubscribeMsgBusiness;
 import org.prototype.demo.TemplateBusiness;
 import org.prototype.demo.TransactionalBusiness;
-import org.prototype.sql.BatchBusiness;
 import org.prototype.sql.PreparedBusiness;
 import org.springframework.boot.context.embedded.LocalServerPort;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -322,11 +321,11 @@ public class ApplicationTest {
 	 * 批处理测试
 	 */
 	@Test
-	public void testBatch() {
-		BatchBusiness busi = new BatchBusiness();
-		int count = busi.count();
-		busi.execute();
-		Assert.assertEquals(2, busi.count() - count);
+	public void testBatch()throws Exception {
+		Object rs=executor.execute(PreparedBusiness.class, new Object[0]);
+		Field field=rs.getClass().getDeclaredField("result");
+		field.setAccessible(true);
+		Assert.assertEquals(1, field.get(rs));
 	}
 
 	/**

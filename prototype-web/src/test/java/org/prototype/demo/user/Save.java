@@ -1,5 +1,7 @@
 package org.prototype.demo.user;
 
+import java.sql.Connection;
+
 import org.prototype.business.Input;
 import org.prototype.business.Output;
 import org.prototype.business.Prop;
@@ -22,14 +24,14 @@ public class Save extends Business{
 	@Output(@Prop(desc="ID"))
 	private Integer id;
 	
-	void business(){
+	void business(Connection connection){
 		SQLBuilder builder=new SQLBuilder("insert into common_user(name) values(?)");
 		builder.appendParam(user.getName());
-		id=insert(builder);
+		id=insert(connection,builder);
 	}
 	
 	@PreparedSql(type=StatementType.INSERT)
-	Integer insert(SQLBuilder builder){
+	Integer insert(Connection connection,SQLBuilder builder){
 		return null;//do nothing
 	}
 	

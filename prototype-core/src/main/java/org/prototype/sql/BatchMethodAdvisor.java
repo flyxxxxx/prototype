@@ -9,12 +9,13 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.Iterator;
 
-import org.prototype.core.ChainOrder;
+import javax.annotation.Resource;
+
 import org.prototype.core.Errors;
+import org.prototype.core.MethodAdvisor;
 import org.prototype.core.MethodBuilder;
 import org.prototype.core.MethodChain;
 import org.prototype.core.MethodFilter;
-import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
 import lombok.extern.slf4j.Slf4j;
@@ -26,8 +27,11 @@ import lombok.extern.slf4j.Slf4j;
  */
 @Component
 @Slf4j
-public class BatchMethodAdvisor extends AbstractSqlMethodAdvisor {
+public class BatchMethodAdvisor implements MethodAdvisor {
 
+	@Resource
+	private SqlConfiguration config;
+	
 	@Override
 	public MethodFilter<?> matches(MethodBuilder builder, Errors errors) {
 		Batch batch = builder.getAnnotation(Batch.class);
@@ -39,6 +43,10 @@ public class BatchMethodAdvisor extends AbstractSqlMethodAdvisor {
 			return null;
 		}
 		boolean rs = true;
+		if (hasParameter(builder.getParameterTypes(),Connection.class)) {//调用的方法要求
+			errors.add("batch.connection.required", builder.toString());
+			return null;
+		}
 		for (String value : batch.value()) {
 			MethodBuilder mi = builder.getClassBuilder().findUniqueMethod(value, errors, Batch.class);
 			if (mi == null) {//调用的方法不存在
@@ -62,6 +70,21 @@ public class BatchMethodAdvisor extends AbstractSqlMethodAdvisor {
 			}
 		}
 		return rs ? new BatchMethodFilter(batch) : null;
+	}
+
+	/**
+	 * 是否有指定类型参数
+	 * @param parameterTypes
+	 * @param type
+	 * @return
+	 */
+	private boolean hasParameter(Class<?>[] parameterTypes, Class<?> type) {
+		for(Class<?> clazz:parameterTypes){
+			if(clazz==type){
+				return true;
+			}
+		}
+		return false;
 	}
 
 	/**
@@ -96,7 +119,7 @@ public class BatchMethodAdvisor extends AbstractSqlMethodAdvisor {
 		 * @throws Exception 异常
 		 */
 		private void doBatch(MethodChain chain, Object[] args) throws Exception {
-			Connection conn = getConnection(args);
+			Connection conn = (Connection) args[0];
 			String[] sql = new String[batch.value().length];
 			Method[] mi = new Method[sql.length];
 			int k = 0;
@@ -105,7 +128,7 @@ public class BatchMethodAdvisor extends AbstractSqlMethodAdvisor {
 				sql[k] = mi[k].getAnnotation(BatchSql.class).value();
 				k++;
 			}
-			int batchSize = 100;// TODO
+			int batchSize = config.getBatchSize();
 			PreparedStatement[] ps = new PreparedStatement[sql.length];
 			k = 0;
 			try {

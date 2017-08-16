@@ -70,7 +70,7 @@ class ParameterAnnotationsBuilderImpl implements ParameterAnnotationsBuilder {
 		if (annotations == null || annotations.length == 0) {
 			return;
 		}
-		Assert.isTrue(parameterIndex < annotations.length);
+		Assert.isTrue(parameterIndex < this.annotations.length);
 		List<javassist.bytecode.annotation.Annotation> list = CtMethodBuilder.getAnnotations(cp, annotations);
 		list.addAll(Arrays.asList(this.annotations[parameterIndex]));
 		this.annotations[parameterIndex] = list.toArray(new javassist.bytecode.annotation.Annotation[list.size()]);

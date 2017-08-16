@@ -216,7 +216,7 @@ public class ClassScanerImpl implements ClassScaner, BeanFactoryAware {
 
 			@Override
 			public void onError(Throwable e) {
-				log.error("Modifi classes error", e);
+				log.error("Modify classes error", e);
 			}
 
 			// 处理类的过程中，优先处理父类

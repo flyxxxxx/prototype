@@ -15,8 +15,10 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 
-import org.prototype.core.ChainOrder;
+import javax.annotation.Resource;
+
 import org.prototype.core.Errors;
+import org.prototype.core.MethodAdvisor;
 import org.prototype.core.MethodBuilder;
 import org.prototype.core.MethodChain;
 import org.prototype.core.MethodFilter;
@@ -24,8 +26,11 @@ import org.prototype.reflect.ClassUtils;
 import org.prototype.reflect.MethodUtils;
 import org.prototype.reflect.Property;
 import org.springframework.core.ResolvableType;
-import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * 预处理SQL. <br>
@@ -35,7 +40,14 @@ import org.springframework.stereotype.Component;
  *
  */
 @Component
-public class PreparedSqlMethodAdvisor extends AbstractSqlMethodAdvisor {
+@Slf4j
+public class PreparedSqlMethodAdvisor implements MethodAdvisor {
+
+	@Resource
+	private SqlConfiguration config;
+
+	@Resource
+	private ObjectMapper mapper;
 
 	@Override
 	public MethodFilter<?> matches(MethodBuilder builder, Errors errors) {
@@ -44,34 +56,37 @@ public class PreparedSqlMethodAdvisor extends AbstractSqlMethodAdvisor {
 			return null;
 		}
 		Class<?>[] types = builder.getParameterTypes();
-		if (types.length == 0) {
-			errors.add("preparedsql.method.sql", builder.toString());
+		int length=types.length;
+		if (length < 2) {
+			errors.add("preparedsql.method.params", builder.toString());
 			return null;
 		}
 		boolean rs = true;
-		if (types.length > 3) {
-			errors.add("preparedsql.method.paramtoomore", builder.toString());
+		if (!Connection.class.equals(types[0])) {
 			rs = false;
 		}
-		boolean conn = Connection.class.equals(types[0]);
-		if (SQLBuilder.class.equals(types[conn ? 1 : 0])) {
-			// TODO
-		} else {
-			if (!String.class.equals(types[conn ? 1 : 0])) {
-				errors.add("preparedsql.method.paramtype", builder.toString(), Integer.toString(conn ? 1 : 0),
-						"String");
+		if(SQLBuilder.class.equals(types[1])){
+			if (length > 2) {
 				rs = false;
 			}
-			if (types.length == (conn ? 3 : 2) && !Object[].class.equals(types[conn ? 2 : 1])) {
-				errors.add("preparedsql.method.paramtype", builder.toString(), Integer.toString(conn ? 2 : 1),
-						"Object[]");
+		}else if(String.class.equals(types[1])){
+			if(length==3){
+				if(!Object[].class.equals(types[2])){
+					rs=false;
+				}
+			}else if(length>3){
 				rs = false;
 			}
+		}else{
+			rs = false;
+		}
+		if(!rs){
+			errors.add("preparedsql.method.params", builder.toString(),builder.getName());
 		}
 		return rs ? new PreparedSqlMethodFilter(sql) : null;
 	}
 
-	//TODO 未解决关联ID的绑定问题
+	// TODO 未解决关联ID的绑定问题
 	private class PreparedSqlMethodFilter implements MethodFilter<PreparedSql> {
 
 		private PreparedSql preparedSql;
@@ -82,18 +97,20 @@ public class PreparedSqlMethodAdvisor extends AbstractSqlMethodAdvisor {
 
 		@Override
 		public Object doFilter(Object[] args, MethodChain chain) throws Exception {
-			Connection connection = getConnection(args);
-			boolean conn = Connection.class.equals(args[0]);
-			Object object = (Object) args[conn ? 1 : 0];
+			Connection connection = (Connection) args[0];
+			Object object = (Object) args[1];
 			String sql = null;
 			Object[] parameters = null;
 			if (String.class.isInstance(object)) {
 				sql = (String) object;
-				parameters = (args.length > (conn ? 1 : 0) + 1) ? (Object[]) args[conn ? 2 : 1] : new Object[0];
+				parameters = args.length==3?(Object[]) args[2]:new Object[0];
 			} else {
 				SQLBuilder builder = (SQLBuilder) object;
 				sql = builder.getSql();
 				parameters = builder.getParams();
+			}
+			if (config.isShowSql() || log.isDebugEnabled()) {
+				log.info("Prepared sql : {} , parameters : {}", sql, mapper.writeValueAsString(parameters));
 			}
 			return execute(chain, connection, sql, parameters);
 		}
@@ -216,11 +233,10 @@ public class PreparedSqlMethodAdvisor extends AbstractSqlMethodAdvisor {
 					return getMapResult(set, returnType);
 				} else if (returnType.isArray()) {
 					Collection<?> list = getCollectionResult(set, returnType, chain.getGenericReturnType());
-					list.toArray((Object[]) Array.newInstance(returnType.getComponentType(), list.size()));
+					return list.toArray((Object[]) Array.newInstance(returnType.getComponentType(), list.size()));
 				} else {
 					return getSingleResult(set, returnType);
 				}
-				return null;
 			}
 		}
 

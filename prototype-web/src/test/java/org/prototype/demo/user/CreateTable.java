@@ -4,7 +4,6 @@ import java.sql.Connection;
 
 import org.prototype.web.Business;
 import org.prototype.business.ServiceDefine;
-import org.prototype.sql.PreparedSql;
 
 @ServiceDefine(open=false,value="create table")
 public class CreateTable extends Business{

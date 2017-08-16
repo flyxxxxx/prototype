@@ -1,5 +1,7 @@
 package org.prototype.demo.user;
 
+import java.sql.Connection;
+
 import org.prototype.business.Input;
 import org.prototype.business.Prop;
 import org.prototype.business.ServiceDefine;
@@ -18,14 +20,14 @@ public class Delete extends Business{
 	@Input(@Prop(desc="ID"))
 	private Integer id;
 	
-	void business(){
+	void business(Connection connection){
 		SQLBuilder builder=new SQLBuilder("delete from common_user where id=?");
 		builder.appendParam(id);
-		delete(builder);
+		delete(connection,builder);
 	}
 	
 	@PreparedSql(type=StatementType.DELETE)
-	void delete(SQLBuilder builder){
+	void delete(Connection connection,SQLBuilder builder){
 		//do nothing
 	}
 	

@@ -25,6 +25,7 @@ import org.prototype.PrototypeConfig.Api;
 import org.prototype.PrototypeInitializer;
 import org.prototype.business.ApiCreator;
 import org.prototype.business.BusinessExecutor;
+import org.prototype.business.IteratorBuilder;
 import org.prototype.business.Service;
 import org.prototype.business.ServiceDefine;
 import org.prototype.business.View;
@@ -256,23 +257,78 @@ public class ControllerServiceCreator implements ApiCreator<Class<?>>, BeanFacto
 		private Service service;
 		private Property view;
 		private boolean eventSource;
+		private boolean requestBody;
 
-		public ControllerMethodAdvisor(Service service, Property view, boolean eventSource) {
+		public ControllerMethodAdvisor(Service service, boolean requestBody, Property view, boolean eventSource) {
 			this.service = service;
+			this.requestBody = requestBody;
 			this.view = view;
 			this.eventSource = eventSource;
 		}
 
 		@Override
 		public Object doFilter(Object[] args, MethodChain chain) throws Exception {
+			Object[] parameters = getParameters(args, chain.getMethod().getParameters());
 			if (async) {
 				DeferredResult<Object> deferredResult = new DeferredResult<>();
-				executor.submit(service.getType(), args).whenCompleteAsync((result, throwable) -> {
-					deferredResult.setResult(execute(args));
+				executor.submit(service.getType(), parameters).whenCompleteAsync((result, throwable) -> {
+					deferredResult.setResult(result);
 				});
 				return deferredResult;
 			}
-			return execute(args);
+			return execute(parameters);
+		}
+
+		private Object[] getParameters(Object[] args, Parameter[] parameters) throws Exception {
+			if (requestBody) {
+				return args;
+			}
+			Object rs = service.getParamType().newInstance();
+			int k = 0;
+			for (Parameter parameter : parameters) {
+				initProperty(rs, parameter, args[k++]);
+			}
+			return new Object[] { rs };
+		}
+
+		private void initProperty(Object rs, Parameter parameter, Object value) throws Exception {
+			RequestParam param = parameter.getAnnotation(RequestParam.class);
+			if (param == null || param.name().length() == 0) {
+				return;
+			}
+			String[] paths = param.name().split("[.]");
+			Object object = rs;
+			for (int i = 0, k = paths.length - 1; i < k; i++) {
+				Property prop = ClassUtils.properties(object.getClass()).get(paths[i]);
+				if (prop == null) {
+					return;
+				}
+				Object obj = prop.getValue(object);
+				if (obj == null) {
+					obj = initProperty(prop);
+					prop.setValue(object, obj);
+				}
+				object = obj;
+			}
+			Property prop = ClassUtils.properties(object.getClass()).get(paths[paths.length - 1]);
+			if (prop == null) {
+				return;
+			}
+			prop.setValue(object, value);
+		}
+
+		private Object initProperty(Property prop) throws Exception {
+			String type = ClassUtils.getDataType(prop.getType());
+			switch (type) {
+			case ClassUtils.SET:
+				return new HashSet();
+			case ClassUtils.LIST:
+				return new ArrayList<>();
+			case ClassUtils.MAP:
+				return new HashMap<>();
+			default:
+				return prop.getType().newInstance();
+			}
 		}
 
 		private Object execute(Object[] args) {
@@ -478,14 +534,14 @@ public class ControllerServiceCreator implements ApiCreator<Class<?>>, BeanFacto
 			String methodName = name + (version == null ? "" : version.replace('.', '_'));
 			if (async) {
 				mb = builder.newMethod(Modifier.PUBLIC, DeferredResult.class, methodName, parameterTypes,
-						throwableTypes, new ControllerMethodAdvisor(service, view, eventSource));
+						throwableTypes, new ControllerMethodAdvisor(service, requestBody, view, eventSource));
 			} else {
 				Class<?> type = view == null ? service.getResultType() : ModelAndView.class;
 				if (eventSource) {
 					type = String.class;
 				}
 				mb = builder.newMethod(Modifier.PUBLIC, type, methodName, parameterTypes, throwableTypes,
-						new ControllerMethodAdvisor(service, view, eventSource));
+						new ControllerMethodAdvisor(service, requestBody, view, eventSource));
 			}
 			buildMethodAnnotations(mb, requestMapping, service, view != null, eventSource, version);
 			buildParametersAnnotations(mb, mps, requestBody);
@@ -583,19 +639,20 @@ public class ControllerServiceCreator implements ApiCreator<Class<?>>, BeanFacto
 
 		private void addParameters(List<MethodParameter> params, Class<?> type, String prefix) {
 			Collection<Property> properties = ClassUtils.properties(type).values();
-			if (properties.size() == 1 && prefix.length() == 0) {
-				Property property = properties.iterator().next();
-				if (hasPojoProperty(property.getType(), true)) {// TODO
-					addParameters(params, property.getType(), property.getName());
-					return;
-				}
-			}
 			for (Property property : properties) {
-				MethodParameter mp = new MethodParameter();
-				mp.type = property.getType();
-				mp.annotations = property.getField().getAnnotations();
-				mp.name = (prefix.length() == 0 ? "" : (prefix + ".")) + property.getName();
-				params.add(mp);
+				String name = (prefix.length() == 0 ? "" : (prefix + ".")) + property.getName();
+				String dt = ClassUtils.getDataType(property.getType());
+				switch (dt) {
+				case ClassUtils.POJO:
+					addParameters(params, property.getType(), name);
+					break;
+				default:
+					MethodParameter mp = new MethodParameter();
+					mp.type = property.getType();
+					mp.annotations = property.getField().getAnnotations();
+					mp.name = name;
+					params.add(mp);
+				}
 			}
 		}
 
@@ -608,16 +665,29 @@ public class ControllerServiceCreator implements ApiCreator<Class<?>>, BeanFacto
 		 */
 		private boolean isComponent(Property property) {
 			String type = ClassUtils.getDataType(property.getType());
+			Class<?> clazz = null;
 			switch (type) {
 			case ClassUtils.POJO:
-			case ClassUtils.LIST:
-			case ClassUtils.ARRAY:
+				for (Property prop : ClassUtils.properties(property.getType()).values()) {
+					if (isComponent(prop)) {
+						return true;
+					}
+				}
+				return false;
 			case ClassUtils.SET:
+			case ClassUtils.LIST:
+				clazz = IteratorBuilder.getGeneric(property.getField(), 0);
+				break;
+			case ClassUtils.ARRAY:
+				clazz = property.getType().getComponentType();
+				break;
 			case ClassUtils.MAP:
-				return true;
+				clazz = IteratorBuilder.getGeneric(property.getField(), 1);
+				break;
 			default:
 				return false;
 			}
+			return ClassUtils.POJO.equals(ClassUtils.getDataType(clazz));
 		}
 
 		private boolean hasPojoProperty(Class<?> type, boolean paramType) {
@@ -625,13 +695,9 @@ public class ControllerServiceCreator implements ApiCreator<Class<?>>, BeanFacto
 				return false;
 			}
 			Collection<Property> properties = ClassUtils.properties(type).values();
-			if (properties.size() == 1 && paramType) {
-				return hasPojoProperty(type, false);
-			}
-			boolean component = false;
 			for (Property property : properties) {
 				if (isComponent(property)) {
-
+					return true;
 				}
 			}
 			return false;

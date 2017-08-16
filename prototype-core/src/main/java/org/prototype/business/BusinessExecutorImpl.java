@@ -1,7 +1,5 @@
 package org.prototype.business;
 
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
-
 import java.lang.annotation.Annotation;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;

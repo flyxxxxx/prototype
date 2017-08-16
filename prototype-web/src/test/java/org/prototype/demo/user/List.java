@@ -1,5 +1,6 @@
 package org.prototype.demo.user;
 
+import java.sql.Connection;
 import java.util.Collection;
 
 import org.prototype.business.Input;
@@ -24,14 +25,14 @@ public class List extends Business {
 	@Output(desc="用户列表",value={ @Prop(name = "id", desc = "ID"), @Prop(name = "name", desc = "姓名") })
 	private Collection<User> users;
 
-	void business() {
+	void business(Connection connection) {
 		SQLBuilder builder = new SQLBuilder("select id,name from common_user");
 		builder.appendWhenNotEmpty(keyword, "%" + keyword + "%", "where name like ?");
-		users = query(builder);
+		users = query(connection,builder);
 	}
 
 	@PreparedSql
-	private Collection<User> query(SQLBuilder builder) {
+	private Collection<User> query(Connection connection,SQLBuilder builder) {
 		return null;// do nothing
 	}
 	

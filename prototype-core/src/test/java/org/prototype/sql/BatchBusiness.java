@@ -1,5 +1,6 @@
 package org.prototype.sql;
 
+import java.sql.Connection;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -29,12 +30,12 @@ public class BatchBusiness {
 	}
 
 	@Transactional
-	public int count() {
-		return countSql("select count(id) from sys_dict");
+	public int count(Connection conn) {
+		return countSql(conn,"select count(id) from sys_dict");
 	}
 
 	@PreparedSql()
-	private int countSql(String sql){return 0;}
+	private int countSql(Connection conn,String sql){return 0;}
 
 	@BatchSql("update sys_dict set name=? where id=?")
 	CollectionIterator<?> update() {
