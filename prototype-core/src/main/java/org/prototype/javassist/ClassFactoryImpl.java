@@ -1,8 +1,11 @@
 package org.prototype.javassist;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.io.Serializable;
 import java.lang.ref.WeakReference;
 import java.lang.reflect.Array;
+import java.net.URL;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -11,8 +14,11 @@ import org.prototype.core.ClassFactory;
 import org.prototype.core.InterfaceBuilder;
 import org.prototype.inject.InjectHelper;
 import org.springframework.beans.factory.support.BeanDefinitionRegistry;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 
 import javassist.CannotCompileException;
+import javassist.ClassPath;
 import javassist.ClassPool;
 import javassist.CtClass;
 import javassist.CtMethod;
@@ -50,6 +56,40 @@ class ClassFactoryImpl implements ClassFactory {
 	public ClassFactoryImpl(BeanDefinitionRegistry registry, InjectHelper helper) {
 		this.registry = registry;
 		this.helper = helper;
+		classPool.insertClassPath(new ClassPathImpl());
+	}
+
+	private class ClassPathImpl implements ClassPath {
+
+		private PathMatchingResourcePatternResolver resolver=new PathMatchingResourcePatternResolver();
+
+		@Override
+		public InputStream openClassfile(String classname) throws NotFoundException {
+			try {
+				return find(classname).openStream();
+			} catch (IOException e) {
+				throw new NotFoundException("Class " + classname + " not found", e);
+			}
+		}
+
+		@Override
+		public URL find(String classname) {
+			Resource resource = resolver.getResource("classpath:" + classname.replace('.', '/') + ".class");
+			if(resource==null||!resource.exists()){
+				return null;
+			}
+			try {
+				return resource.getURL();
+			} catch (IOException e) {
+				throw new RuntimeException("IO error : "+classname, e);
+			}
+		}
+
+		@Override
+		public void close() {
+			// do nothing
+		}
+
 	}
 
 	@Override
