@@ -219,8 +219,8 @@ public class ServiceClassAdvisor implements ClassAdvisor {
 		Class<?> clazz = factory.loadClass(name);
 		Service service = new Service();
 		service.setDefine(clazz.getAnnotation(ServiceDefine.class));
-		setBaseType(service, baseTypes, clazz, errors);
 		service.setType(clazz);
+		setBaseType(service, baseTypes, clazz, errors);
 		service.setParamType(createClass(factory, clazz, IteratorBuilder.getProperties(clazz, true), true, errors));
 		service.setResultType(createClass(factory, clazz, IteratorBuilder.getProperties(clazz, false), false, errors));
 		executor.registerService(service);
@@ -236,6 +236,7 @@ public class ServiceClassAdvisor implements ClassAdvisor {
 		Service firstService = baseTypes.get(type);
 		if (firstService == null) {
 			baseTypes.put(type, service);
+			service.setBaseType(type);
 			if (Modifier.isAbstract(type.getModifiers())) {
 				errors.add("service.basetype.modifier", type.getName());
 			}

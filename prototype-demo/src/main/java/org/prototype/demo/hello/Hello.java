@@ -15,7 +15,7 @@ import org.prototype.demo.Business;
 @ServiceDefine(value = "Hello",url="/hello")
 public class Hello extends Business{
 
-	@Input(@Prop(desc="姓名",maxLength=20))
+	@Input(@Prop(desc="姓名",maxLength=4))
 	private String name;
 
 	@Output(@Prop(desc="welcome"))

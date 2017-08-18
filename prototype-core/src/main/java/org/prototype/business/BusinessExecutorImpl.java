@@ -310,8 +310,12 @@ public class BusinessExecutorImpl implements BusinessExecutor {
 
 		@Override
 		public void setResultType(int resultType) {
-			result = BusinessExecutorImpl.this.getResult(this, resultType);
-			log.debug("Business {} set result {} to {}", PrototypeStatus.getStatus().getId(), resultType, type);
+			try {
+				service.getSetResult().invoke(target,resultType);
+				log.debug("Business {} set result {} to {}", PrototypeStatus.getStatus().getId(), resultType, type);
+			} catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
+				throw new RuntimeException(e);
+			}
 		}
 
 		@SuppressWarnings("unchecked")
@@ -326,7 +330,7 @@ public class BusinessExecutorImpl implements BusinessExecutor {
 			validated = false;
 			setResultType(VALIDATE);
 			try {
-				service.getAddValidateError().invoke(result, error);
+				service.getAddValidateError().invoke(target, error);
 			} catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException e) {
 				throw new RuntimeException(e);
 			}

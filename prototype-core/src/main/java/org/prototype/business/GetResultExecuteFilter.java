@@ -32,9 +32,13 @@ public class GetResultExecuteFilter implements ExecuteFilter {
 		if (type == null) {
 			return;
 		}
+		Field field=chain.getTarget().getClass().getSuperclass().getDeclaredField("result");
+		field.setAccessible(true);
 		Object rs = type.newInstance();
 		new ResultSetter(chain.getTarget(), rs).build();
 		chain.setResult(rs);
+		field=rs.getClass().getDeclaredField("result");
+		field.setAccessible(true);
 	}
 	
 	/**
