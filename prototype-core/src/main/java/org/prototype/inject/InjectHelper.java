@@ -201,7 +201,7 @@ public class InjectHelper {
 			return false;
 		}else if(anns.length==1){
 			ParameterInjecter injecter=parameterInjecters.get(anns[0].annotationType());
-			List<String> keys=injecter.validate(anns[0]);
+			List<String> keys=injecter.validate(anns[0],clazz);
 			if(keys==null){
 				return true;
 			}
@@ -371,7 +371,7 @@ public class InjectHelper {
 	private Object getParameter(Parameter parameter) {
 		Annotation[] annotations=AnnotationUtils.getAnnotationByMeta(parameter.getAnnotations(), ParameterInject.class);
 		if (annotations.length==1) {
-			return getInjectParameter(annotations[0]);
+			return getInjectParameter(parameter.getType(), annotations[0]);
 		}
 		Qualifier q = parameter.getAnnotation(Qualifier.class);
 		Class<?> parameterType = parameter.getType();
@@ -393,14 +393,15 @@ public class InjectHelper {
 
 	/**
 	 * 获取注入参数
+	 * @param type 参数类型
 	 * @param annotation
 	 *            参数的所有注解
 	 * @return 参数值
 	 */
 	@SuppressWarnings({ "rawtypes", "unchecked" })
-	public Object getInjectParameter(Annotation annotation) {
+	public Object getInjectParameter(Class<?> type,Annotation annotation) {
 		ParameterInjecter injecter = parameterInjecters.get(annotation.annotationType());
-		return injecter.inject(annotation);
+		return injecter.inject(annotation,type);
 	}
 
 }

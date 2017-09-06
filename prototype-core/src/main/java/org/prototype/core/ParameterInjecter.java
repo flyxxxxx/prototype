@@ -32,13 +32,15 @@ public interface ParameterInjecter<T extends Annotation,V> {
 	/**
 	 * 进行注解的验证
 	 * @param annotation 注解
+	 * @param type 参数类型
 	 * @return 错误消息的关键字
 	 */
-	List<String> validate(T annotation);
+	List<String> validate(T annotation,Class<V> type);
 	/**
 	 * 根据注解注入参数
 	 * @param annotation 注解
+	 * @param type 参数类型
 	 * @return 注入的参数的值
 	 */
-	V inject(T annotation);
+	V inject(T annotation,Class<V> type);
 }

@@ -19,12 +19,12 @@ public class CounterInjector implements ParameterInjecter<Counter,Long> {
 	private AtomicLong seq = new AtomicLong();
 
 	@Override
-	public List<String> validate(Counter annotation) {
+	public List<String> validate(Counter annotation,Class<Long> type) {
 		return new ArrayList<>();
 	}
 
 	@Override
-	public Long inject(Counter annotation) {
+	public Long inject(Counter annotation,Class<Long> type) {
 		return seq.incrementAndGet();
 	}
 

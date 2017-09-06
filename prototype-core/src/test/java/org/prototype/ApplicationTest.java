@@ -41,6 +41,7 @@ import org.prototype.demo.SubscribeMsgBusiness;
 import org.prototype.demo.TemplateBusiness;
 import org.prototype.demo.TransactionalBusiness;
 import org.prototype.sql.PreparedBusiness;
+import org.prototype.util.TodayZeroBusiness;
 import org.springframework.boot.context.embedded.LocalServerPort;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.ApplicationContext;
@@ -205,6 +206,14 @@ public class ApplicationTest {
 		Assert.assertEquals(1, busi.getValue());
 	}
 
+	/**
+	 * 测试当天0点
+	 */
+	@Test
+	public void testTodayZero(){
+		TodayZeroBusiness busi=new TodayZeroBusiness();
+		busi.business();
+	}
 	/**
 	 * 重载的异步
 	 * 

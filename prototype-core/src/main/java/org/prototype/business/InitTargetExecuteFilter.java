@@ -120,7 +120,7 @@ public class InitTargetExecuteFilter implements ExecuteFilter {
 		for (Parameter parameter : parameters) {
 			Annotation[] annotations=AnnotationUtils.getAnnotationByMeta(parameter.getAnnotations(), ParameterInject.class);
 			if (annotations.length>0) {
-				list.add(helper.getInjectParameter(annotations[0]));
+				list.add(helper.getInjectParameter(parameter.getType(), annotations[0]));
 			} else {
 				list.add(params[k++]);
 			}
