@@ -41,5 +41,6 @@ public interface AnnotationBuilder {
 	 * @param annotationClass 注解类型
 	 * @return 新注解的构建器
 	 */
-	AnnotationBuilder newAnnotations(Class<?> annotationClass);
+	AnnotationBuilder newAnnotation(Class<?> annotationClass);
+
 }

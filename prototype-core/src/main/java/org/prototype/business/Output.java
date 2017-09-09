@@ -38,7 +38,7 @@ public @interface Output {
 	String hint() default "";
 	
 	/**
-	 * 是否必须(POJO对象)
+	 * 是否必须
 	 * @return 是否必须
 	 */
 	boolean required() default true;

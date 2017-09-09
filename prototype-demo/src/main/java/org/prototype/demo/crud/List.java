@@ -1,15 +1,14 @@
 package org.prototype.demo.crud;
 
 import java.sql.Connection;
-import java.util.Collection;
 
 import org.prototype.business.Input;
 import org.prototype.business.Output;
 import org.prototype.business.Prop;
 import org.prototype.business.ServiceDefine;
+import org.prototype.demo.Business;
 import org.prototype.sql.PreparedSql;
 import org.prototype.sql.SQLBuilder;
-import org.prototype.demo.Business;
 import org.springframework.web.bind.annotation.RequestMapping;
 
 import lombok.extern.slf4j.Slf4j;
@@ -23,8 +22,8 @@ public class List extends Business {
 	private String keyword;
 
 	@Output(desc="用户列表",value={ @Prop(name = "id", desc = "ID"), @Prop(name = "name", desc = "姓名") })
-	private Collection<User> users;
-
+	private java.util.List<User> users;
+	
 	void business(Connection connection) {
 		SQLBuilder builder = new SQLBuilder("select id,name from common_user");
 		builder.appendWhenNotEmpty(keyword, "%" + keyword + "%", "where name like ?");
@@ -32,7 +31,7 @@ public class List extends Business {
 	}
 
 	@PreparedSql(value={"id","name"})
-	private Collection<User> query(Connection connection,SQLBuilder builder) {
+	private java.util.List<User> query(Connection connection,SQLBuilder builder) {
 		return null;// do nothing
 	}
 	

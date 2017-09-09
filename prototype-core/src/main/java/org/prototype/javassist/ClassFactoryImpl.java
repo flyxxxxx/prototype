@@ -6,7 +6,9 @@ import java.io.Serializable;
 import java.lang.ref.WeakReference;
 import java.lang.reflect.Array;
 import java.net.URL;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.prototype.core.ClassBuilder;
@@ -24,6 +26,9 @@ import javassist.CtClass;
 import javassist.CtMethod;
 import javassist.CtNewMethod;
 import javassist.NotFoundException;
+import javassist.bytecode.SignatureAttribute.ClassType;
+import javassist.bytecode.SignatureAttribute.MethodSignature;
+import javassist.bytecode.SignatureAttribute.TypeArgument;
 import lombok.Getter;
 
 /**
@@ -228,14 +233,29 @@ class ClassFactoryImpl implements ClassFactory {
 		return rs;
 	}
 
-	public void newSetGetMethod(CtClass clazz, String name, Class<?> type) {
+	public void newSetGetMethod(CtClass clazz, String name, Class<?> type,Class<?>[] typeArguments) {
 		try {
 			CtMethod method = CtNewMethod.make(CtMethodUtils.buildGetMethod(name, type), clazz);
+			setGetSignature(method,type,typeArguments);
 			clazz.addMethod(method);
 			method = CtNewMethod.make(CtMethodUtils.buildSetMethod(name, type), clazz);
 			clazz.addMethod(method);
+			//未处理set的泛型
 		} catch (CannotCompileException e) {
 			throw new RuntimeException("Compile error", e);
 		}
+	}
+
+	private void setGetSignature(CtMethod method,Class<?> type,Class<?>[] typeArguments) {
+		if(typeArguments==null||typeArguments.length==0){
+			return;
+		}
+		List<TypeArgument> arguments = new ArrayList<>();
+		for (Class<?> typeArgument : typeArguments) {
+			arguments.add(new TypeArgument(new ClassType(typeArgument.getName())));
+		}
+		ClassType ct=new ClassType(type.getName(), arguments.toArray(new TypeArgument[arguments.size()]));
+		MethodSignature signature=new MethodSignature(null,null,ct,null);
+		method.setGenericSignature(signature.encode());
 	}
 }

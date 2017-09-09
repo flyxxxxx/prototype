@@ -122,7 +122,7 @@ class AnnotationBuilderImpl implements AnnotationBuilder {
 	}
 
 	@Override
-	public AnnotationBuilder newAnnotations(Class<?> annotationClass) {
+	public AnnotationBuilder newAnnotation(Class<?> annotationClass) {
 		Annotation ann = new javassist.bytecode.annotation.Annotation(annotationClass.getName(), pool);
 		return new AnnotationBuilderImpl(pool, ann);
 	}

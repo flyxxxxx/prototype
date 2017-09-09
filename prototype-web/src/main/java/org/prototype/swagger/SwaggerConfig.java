@@ -14,6 +14,7 @@ import lombok.Data;
 @ConfigurationProperties(prefix = "prototype.swagger")
 public class SwaggerConfig {
 
+	private boolean enable=true;
 	private String serverUrl;
 	private String title;
 	private String description;

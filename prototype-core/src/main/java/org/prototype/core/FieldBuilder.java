@@ -35,11 +35,6 @@ public interface FieldBuilder extends AnnotatedBuilder{
 	String getType();
 	
 	/**
-	 * 设定成员变量签名（范型）
-	 * @param typeArguments 成员变量签名
-	 */
-	void setSignature(Class<?>...typeArguments);
-	/**
 	 * 完成成员变量的添加（之后不可再添加注解）
 	 */
 	void create();

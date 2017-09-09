@@ -257,20 +257,25 @@ class CtClassBuilder implements ClassBuilder {
 		try{
 			long value=1L*clazz.getName().hashCode()*clazz.getName().hashCode();
 			CtField field = CtField.make("private static final long serialVersionUID = "+value+"L;", clazz);
-			return new CtFieldBuilder(factory, field,false);
+			return new CtFieldBuilder(factory, field,null,false);
 		} catch (CannotCompileException e) {
 			throw new RuntimeException(e);
 		}
 	}
 
-	// @Override
+	@Override
 	public FieldBuilder newField(int modifiers, String name, Class<?> type, boolean setAndGet) {
+		return newField(modifiers, name, type, null, setAndGet);
+	}
+
+	@Override
+	public FieldBuilder newField(int modifiers, String name, Class<?> type,Class<?>[] typeArguments, boolean setAndGet) {
 		Assert.hasLength(name);
 		Assert.notNull(type);
 		try {
 			CtField field = new CtField(clazz.getClassPool().get(type.getName()), name, clazz);
 			field.setModifiers(modifiers);
-			return new CtFieldBuilder(factory, field,setAndGet);
+			return new CtFieldBuilder(factory, field,typeArguments,setAndGet);
 		} catch (CannotCompileException | NotFoundException e) {
 			throw new RuntimeException(e);
 		}

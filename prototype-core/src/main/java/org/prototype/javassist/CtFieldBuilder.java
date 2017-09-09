@@ -29,11 +29,14 @@ class CtFieldBuilder implements FieldBuilder {
 	private ClassFactoryImpl factory;
 
 	private boolean setAndGet;
+	
+	private Class<?>[] typeArguments;
 
-	public CtFieldBuilder(ClassFactoryImpl factory, CtField field,boolean setAndGet) {
+	public CtFieldBuilder(ClassFactoryImpl factory, CtField field,Class<?>[] typeArguments,boolean setAndGet) {
 		this.factory = factory;
 		this.field = field;
 		this.setAndGet=setAndGet;
+		this.typeArguments=typeArguments;
 	}
 
 	@Override
@@ -66,6 +69,7 @@ class CtFieldBuilder implements FieldBuilder {
 
 	@Override
 	public void create() {
+		setSignature();
 		if (!newAnnotations.isEmpty()) {
 			ConstPool cp = field.getFieldInfo().getConstPool();
 			AnnotationsAttribute attr = (AnnotationsAttribute) field.getFieldInfo()
@@ -82,7 +86,7 @@ class CtFieldBuilder implements FieldBuilder {
 		try {
 			field.getDeclaringClass().addField(field);
 			if (setAndGet) {
-				factory.newSetGetMethod(field.getDeclaringClass(), field.getName(), factory.loadClass(field.getType().getName()));
+				factory.newSetGetMethod(field.getDeclaringClass(), field.getName(), factory.loadClass(field.getType().getName()),typeArguments);
 			}
 		} catch (CannotCompileException|NotFoundException e) {
 			throw new RuntimeException(e);
@@ -138,8 +142,10 @@ class CtFieldBuilder implements FieldBuilder {
 		}
 	}
 
-	@Override
-	public void setSignature(Class<?>... typeArguments) {
+	private void setSignature() {
+		if(typeArguments==null||typeArguments.length==0){
+			return;
+		}
 		List<TypeArgument> arguments = new ArrayList<>();
 		for (Class<?> typeArgument : typeArguments) {
 			arguments.add(new TypeArgument(new ClassType(typeArgument.getName())));

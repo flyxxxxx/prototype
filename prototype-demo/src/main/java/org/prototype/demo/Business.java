@@ -34,9 +34,9 @@ public class Business {
 
 	protected static final int SUCCESS = 1;
 	private static final int ERROR_SQL = -11;
-	@Output(@Prop(desc = "结果"))
+	@Output(@Prop(desc = "结果",hint="大于0表示成功，小于等于0表示有错误"))
 	protected int result = SUCCESS;
-	@Output(@Prop(desc = "原因"))
+	@Output(@Prop(desc = "出错原因"))
 	protected String reason;
 	@Output(@Prop(desc = "验证错误"))
 	protected String errors;

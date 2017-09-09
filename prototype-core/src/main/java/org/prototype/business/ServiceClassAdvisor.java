@@ -31,6 +31,7 @@ import org.prototype.core.FieldBuilder;
 import org.prototype.reflect.ClassUtils;
 import org.prototype.reflect.MethodUtils;
 import org.prototype.reflect.Property;
+import org.springframework.core.ResolvableType;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
@@ -600,7 +601,7 @@ public class ServiceClassAdvisor implements ClassAdvisor {
 			Object io = pojo ? inputOutputs.get(clazz) : inputOutput;
 			Input input = prop == null && isInput ? (Input) io : null;
 			Output output = prop != null || isInput ? null : (Output) io;
-			AnnotationBuilder ab = fb.getAnnotationBuilder(pojo ? ApiModelProperty.class : ApiParam.class);
+			AnnotationBuilder ab = fb.getAnnotationBuilder(pojo||!isInput ? ApiModelProperty.class : ApiParam.class);
 			ab.setAttribute("value", prop != null ? prop.desc()
 					: (input != null ? input.desc() : (output != null ? output.desc() : "")));
 			if (prop == null) {
@@ -731,8 +732,7 @@ public class ServiceClassAdvisor implements ClassAdvisor {
 			Class<?> clazz = createComponent(field, generic, inputOutput);
 			if (clazz != null) {// 构建新类的成员变量
 				log.debug("Build {} to type : java.util.List<{}>", field, clazz.getName());
-				FieldBuilder fb = builder.newField(Modifier.PRIVATE, field.getName(), List.class, true);
-				fb.setSignature(clazz);
+				FieldBuilder fb = builder.newField(Modifier.PRIVATE, field.getName(), List.class,new Class<?>[]{clazz}, true);
 				addAnnotation(fb, clazz, true, inputOutput == null ? inputOutputs.get(generic) : inputOutput);
 				fb.create();
 				return true;
@@ -764,8 +764,7 @@ public class ServiceClassAdvisor implements ClassAdvisor {
 			}
 			Class<?> clazz = createComponent(field, generic, inputOutput);
 			if (clazz != null) {
-				FieldBuilder fb = builder.newField(Modifier.PRIVATE, field.getName(), Set.class, true);
-				fb.setSignature(clazz);
+				FieldBuilder fb = builder.newField(Modifier.PRIVATE, field.getName(), Set.class,new Class<?>[]{clazz}, true);
 				addAnnotation(fb, clazz, true, inputOutput == null ? inputOutputs.get(generic) : inputOutput);
 				fb.create();
 				log.debug("Build {} to type : java.util.Set<{}>", field, clazz.getName());
@@ -807,8 +806,7 @@ public class ServiceClassAdvisor implements ClassAdvisor {
 			}
 			Class<?> clazz = createComponent(field, generic, inputOutput);
 			if (clazz != null) {
-				FieldBuilder fb = builder.newField(Modifier.PRIVATE, field.getName(), Map.class, true);
-				fb.setSignature(String.class, clazz);
+				FieldBuilder fb = builder.newField(Modifier.PRIVATE, field.getName(), Map.class,new Class<?>[]{String.class,clazz}, true);
 				addAnnotation(fb, clazz, true, inputOutput == null ? inputOutputs.get(generic) : inputOutput);
 				fb.create();
 				log.debug("Build {} to type : java.util.Map<String,{}>", field, clazz.getName());

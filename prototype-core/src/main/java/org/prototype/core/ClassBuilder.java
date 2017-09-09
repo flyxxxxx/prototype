@@ -135,6 +135,16 @@ public interface ClassBuilder extends AnnotatedBuilder {
 	 * @return 成员变量构建器
 	 */
 	FieldBuilder newField(int modifiers,String name,Class<?> type,boolean setAndGet);
+	/**
+	 * 添加新的成员变量
+	 * @param modifiers 成员变量的访问域
+	 * @param name 成员变量名
+	 * @param type 成员变量类型
+	 * @param typeArguments 泛型参数
+	 * @param setAndGet 是否创建set和get方法
+	 * @return 成员变量构建器
+	 */
+	FieldBuilder newField(int modifiers,String name,Class<?> type,Class<?>[] typeArguments,boolean setAndGet);
 
 	/**
 	 * 完成类的创建. <br>创建完成之后不可再修改类、方法、成员变量及其注解

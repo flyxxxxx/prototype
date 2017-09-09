@@ -43,9 +43,11 @@ import org.prototype.reflect.CacheUtils;
 import org.prototype.reflect.CacheUtils.Cache;
 import org.prototype.reflect.ClassUtils;
 import org.prototype.reflect.Property;
+import org.prototype.swagger.SwaggerConfig;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.BeanFactory;
 import org.springframework.beans.factory.BeanFactoryAware;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.support.BeanDefinitionBuilder;
 import org.springframework.beans.factory.support.DefaultListableBeanFactory;
 import org.springframework.scheduling.annotation.EnableAsync;
@@ -62,6 +64,7 @@ import org.springframework.web.servlet.ModelAndView;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -106,9 +109,12 @@ public class ControllerServiceCreator implements ApiCreator<Class<?>>, BeanFacto
 
 	private List<String> apiTypes = new ArrayList<>();
 
-	private Class<? extends Annotation> swaggerApi;
+	@Resource
+	private SwaggerConfig swaggerConfig;
 
-	@SuppressWarnings("unchecked")
+	@Autowired(required = false)
+	private SwaggerAnnotationBuilder swaggerBuilder;
+
 	@PostConstruct
 	void init() {
 		async = initializer.getBootClass().getAnnotation(EnableAsync.class) != null;
@@ -125,12 +131,6 @@ public class ControllerServiceCreator implements ApiCreator<Class<?>>, BeanFacto
 			if (api != null && Boolean.TRUE.equals(api.getEnable())) {
 				apiTypes.add(creator.getType());
 			}
-		}
-		try {
-			swaggerApi = (Class<? extends Annotation>) Thread.currentThread().getContextClassLoader()
-					.loadClass("io.swagger.annotations.ApiOperation");
-		} catch (ClassNotFoundException e) {
-			log.info("Swagger UI disabled");
 		}
 	}
 
@@ -172,7 +172,8 @@ public class ControllerServiceCreator implements ApiCreator<Class<?>>, BeanFacto
 	 * @author lj
 	 *
 	 */
-	class MethodParameter {
+	@Getter
+	static class MethodParameter {
 		private Class<?> type;
 		private Annotation[] annotations;
 		private String name;
@@ -272,7 +273,7 @@ public class ControllerServiceCreator implements ApiCreator<Class<?>>, BeanFacto
 			if (async) {
 				DeferredResult<Object> deferredResult = new DeferredResult<>();
 				executor.submit(service.getType(), parameters).whenCompleteAsync((result, throwable) -> {
-					deferredResult.setResult(result);//TODO 异步的初始化未解决
+					deferredResult.setResult(result);// TODO 异步的初始化未解决
 				});
 				return deferredResult;
 			}
@@ -280,7 +281,7 @@ public class ControllerServiceCreator implements ApiCreator<Class<?>>, BeanFacto
 		}
 
 		private Object[] getParameters(Object[] args, Parameter[] parameters) throws Exception {
-			if (requestBody||service.getParamType()==null) {
+			if (requestBody || service.getParamType() == null) {
 				return args;
 			}
 			Object rs = service.getParamType().newInstance();
@@ -330,8 +331,8 @@ public class ControllerServiceCreator implements ApiCreator<Class<?>>, BeanFacto
 				return prop.getType().newInstance();
 			}
 		}
-		
-		private Object getViewResult(HttpPrototypeStatus status,Object rs){
+
+		private Object getViewResult(HttpPrototypeStatus status, Object rs) {
 			if (view != null) {
 				return getView(status, rs);
 			} else if (eventSource) {
@@ -345,7 +346,7 @@ public class ControllerServiceCreator implements ApiCreator<Class<?>>, BeanFacto
 			HttpPrototypeStatus.setStatus(status);
 			try {
 				Object rs = executor.execute(service.getType(), args);
-				return getViewResult(status,rs);
+				return getViewResult(status, rs);
 			} finally {
 				if (log.isDebugEnabled()) {
 					try {
@@ -492,9 +493,9 @@ public class ControllerServiceCreator implements ApiCreator<Class<?>>, BeanFacto
 			mb.getAnnotationBuilder(RequestMapping.class).setAttribute("value", new String[] { url })
 					.setAttribute("method", methods.toArray(new RequestMethod[methods.size()]));
 			ServiceDefine define = service.getDefine();
-			if (swaggerApi != null) {
-				mb.getAnnotationBuilder(swaggerApi).setAttribute("value", "Version router : " + define.value())
-						.setAttribute("notes", define.hint());
+			if (swaggerBuilder != null) {
+				swaggerBuilder.buildOperation(mb).setAttribute("value", "Version router : " + define.value())
+						.setAttribute("notes", define.hint()).setAttribute("hidden", !swaggerConfig.isEnable());
 			}
 			mb.create();
 		}
@@ -517,8 +518,8 @@ public class ControllerServiceCreator implements ApiCreator<Class<?>>, BeanFacto
 			mb.getParameterAnnotationsBuilder().getAnnotationBuilder(0, RequestParam.class)[0].setAttribute("name",
 					config.getApiParameterName());
 			ServiceDefine define = service.getDefine();
-			if (swaggerApi != null) {
-				mb.getAnnotationBuilder(swaggerApi).setAttribute("value", "API : " + define.value())
+			if (swaggerBuilder != null) {
+				swaggerBuilder.buildOperation(mb).setAttribute("value", "API : " + define.value())
 						.setAttribute("hidden", true);
 			}
 			mb.create();
@@ -547,7 +548,7 @@ public class ControllerServiceCreator implements ApiCreator<Class<?>>, BeanFacto
 				mb = builder.newMethod(Modifier.PUBLIC, type, methodName, parameterTypes, throwableTypes,
 						new ControllerMethodAdvisor(service, requestBody, view, eventSource));
 			}
-			buildMethodAnnotations(mb, requestMapping, service, view != null, eventSource, version);
+			buildMethodAnnotations(mb, requestMapping, service, mps, view != null, eventSource, version);
 			buildParametersAnnotations(mb, mps, requestBody);
 			mb.create();
 		}
@@ -575,20 +576,22 @@ public class ControllerServiceCreator implements ApiCreator<Class<?>>, BeanFacto
 			return classes;
 		}
 
-		private void buildMethodAnnotations(MethodBuilder mb, RequestMapping mapping, Service service, boolean hasView,
-				boolean eventSource, String version) {
+		private void buildMethodAnnotations(MethodBuilder mb, RequestMapping mapping, Service service,
+				MethodParameter[] mps, boolean hasView, boolean eventSource, String version) {
 			mb.copyAnnotations(getAnnotationsExceptMapping(service));
 			mb.getAnnotationBuilder(RequestMapping.class).setAttribute("value", getUrl(mapping, version))
 					.setAttribute("name", mapping.name()).setAttribute("method", mapping.method())
 					.setAttribute("params", mapping.params()).setAttribute("headers", mapping.headers())
 					.setAttribute("consumes", mapping.consumes()).setAttribute("produces", mapping.produces());
 			ServiceDefine define = service.getDefine();
-			if (swaggerApi != null) {
-				mb.getAnnotationBuilder(swaggerApi).setAttribute("value", define.value())
+			if (swaggerBuilder != null) {
+				swaggerBuilder.buildOperation(mb).setAttribute("value", define.value())
 						.setAttribute("notes", define.hint()).setAttribute("httpMethod", mapping.method()[0].name())
 						.setAttribute("response", (hasView || eventSource) ? String.class : service.getResultType())
 						.setAttribute("produces", getArrayValue(mapping.produces()))
-						.setAttribute("consumes", getArrayValue(mapping.consumes()));
+						.setAttribute("consumes", getArrayValue(mapping.consumes()))
+						.setAttribute("hidden", !swaggerConfig.isEnable());
+				swaggerBuilder.buildParams(mb, mps);
 			}
 			if (!hasView) {
 				mb.getAnnotationBuilder(ResponseBody.class);
