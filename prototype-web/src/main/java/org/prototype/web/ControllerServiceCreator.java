@@ -53,6 +53,7 @@ import org.springframework.beans.factory.support.DefaultListableBeanFactory;
 import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.stereotype.Component;
 import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
@@ -177,6 +178,7 @@ public class ControllerServiceCreator implements ApiCreator<Class<?>>, BeanFacto
 		private Class<?> type;
 		private Annotation[] annotations;
 		private String name;
+		private boolean pathVariable;
 	}
 
 	/**
@@ -294,10 +296,17 @@ public class ControllerServiceCreator implements ApiCreator<Class<?>>, BeanFacto
 
 		private void initProperty(Object rs, Parameter parameter, Object value) throws Exception {
 			RequestParam param = parameter.getAnnotation(RequestParam.class);
-			if (param == null || param.name().length() == 0) {
+			String name="";
+			if(param==null){
+				PathVariable pVariable=parameter.getAnnotation(PathVariable.class);
+				name=pVariable==null?"":pVariable.name();
+			}else{
+				name=param.name();
+			}
+			if (name.length() == 0) {
 				return;
 			}
-			String[] paths = param.name().split("[.]");
+			String[] paths = name.split("[.]");
 			Object object = rs;
 			for (int i = 0, k = paths.length - 1; i < k; i++) {
 				Property prop = ClassUtils.properties(object.getClass()).get(paths[i]);
@@ -558,7 +567,9 @@ public class ControllerServiceCreator implements ApiCreator<Class<?>>, BeanFacto
 			ParameterAnnotationsBuilder builder = mb.getParameterAnnotationsBuilder();
 			for (int i = 0, k = mps.length; i < k; i++) {
 				builder.copyAnnotations(i, mps[i].annotations);
-				if (mps[i].name != null) {
+				if(mps[i].pathVariable){
+					builder.getAnnotationBuilder(i, PathVariable.class)[0].setAttribute("name", mps[i].name);
+				}else if (mps[i].name != null) {
 					builder.getAnnotationBuilder(i, RequestParam.class)[0].setAttribute("name", mps[i].name)
 							.setAttribute("required", false);
 				}
@@ -629,6 +640,7 @@ public class ControllerServiceCreator implements ApiCreator<Class<?>>, BeanFacto
 					MethodParameter mp = new MethodParameter();
 					mp.type = parameter.getType();
 					mp.annotations = parameter.getAnnotations();
+					mp.pathVariable=url.indexOf("{"+parameter.getName()+"}")!=-1;
 					params.add(mp);
 				}
 			}
@@ -658,6 +670,7 @@ public class ControllerServiceCreator implements ApiCreator<Class<?>>, BeanFacto
 					mp.type = property.getType();
 					mp.annotations = property.getField().getAnnotations();
 					mp.name = name;
+					mp.pathVariable=url.indexOf("{"+name+"}")!=-1;
 					params.add(mp);
 				}
 			}
