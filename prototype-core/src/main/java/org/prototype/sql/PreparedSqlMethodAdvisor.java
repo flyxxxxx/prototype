@@ -126,7 +126,7 @@ public class PreparedSqlMethodAdvisor implements MethodAdvisor {
 				}
 				switch (preparedSql.type()) {
 				case SELECT:
-					return getSelectResult(ps, chain);
+					return getSelectResult(ps,sql, chain);
 				case INSERT:
 					return getInsertResult(ps, chain.getMethod().getReturnType());
 				default:
@@ -224,24 +224,31 @@ public class PreparedSqlMethodAdvisor implements MethodAdvisor {
 			throw new SQLException("Return type must be void/boolean/int/long ");
 		}
 
-		private Object getSelectResult(PreparedStatement ps, MethodChain chain) throws Exception {
+		private Object getSelectResult(PreparedStatement ps,String sql, MethodChain chain) throws Exception {
 			Class<?> returnType = chain.getMethod().getReturnType();
 			try (ResultSet set = ps.executeQuery()) {
 				if (Collection.class.isAssignableFrom(returnType)) {
-					return getCollectionResult(set, returnType, chain.getGenericReturnType());
+					Collection<?> rs= getCollectionResult(set, returnType, chain.getGenericReturnType());
+					log.debug("Execute sql : {} , total collection : {}", sql, rs.size());
+					return rs;
 				} else if (Map.class.isAssignableFrom(returnType)) {
-					return getMapResult(set, returnType);
+					Map<?,?> map= getMapResult(set, returnType);
+					log.debug("Execute sql : {} , total map : {}", sql, map.size());
+					return map;
 				} else if (returnType.isArray()) {
 					Collection<?> list = getCollectionResult(set, returnType, chain.getGenericReturnType());
+					log.debug("Execute sql : {} , total array : {}", sql, list.size());
 					return list.toArray((Object[]) Array.newInstance(returnType.getComponentType(), list.size()));
 				} else {
-					return getSingleResult(set, returnType);
+					Object rs= getSingleResult(set, returnType);
+					log.debug("Execute sql : {} , single result : {}", sql, rs!=null);
+					return rs;
 				}
 			}
 		}
 
 		@SuppressWarnings({ "rawtypes", "unchecked" })
-		private Object getMapResult(ResultSet set, Class<?> returnType) throws Exception {
+		private Map getMapResult(ResultSet set, Class<?> returnType) throws Exception {
 			ResolvableType type = ResolvableType.forClass(returnType).as(Map.class);
 			Class<?> keyType = type.getGeneric(0).resolve();
 			Class<?> valueType = type.getGeneric(1).resolve();

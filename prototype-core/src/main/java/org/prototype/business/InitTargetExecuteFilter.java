@@ -6,6 +6,7 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -47,7 +48,7 @@ public class InitTargetExecuteFilter implements ExecuteFilter {
 
 	@Resource
 	private InjectHelper helper;
-	
+
 	@Resource
 	private GetResultExecuteFilter getResult;
 
@@ -58,11 +59,12 @@ public class InitTargetExecuteFilter implements ExecuteFilter {
 		List<?>[] lists = groupParameters(constructor.getParameters(), params);
 		Object target = constructor.newInstance(lists[0].toArray());
 		chain.setTarget(target);
-		Field field=chain.getTarget().getClass().getSuperclass().getDeclaredField("result");
+		Field field = chain.getTarget().getClass().getSuperclass().getDeclaredField("result");
 		field.setAccessible(true);
 		copyProperties(chain, chain.getService().getParamType(), lists[1].toArray(), target);
 		if (!chain.isValidated()) {
-			log.debug("Business {} validate {} failed",PrototypeStatus.getStatus().getId(),chain.getService().getType());
+			log.debug("Business {} validate {} failed", PrototypeStatus.getStatus().getId(),
+					chain.getService().getType());
 		}
 		chain.doChain();
 	}
@@ -82,7 +84,7 @@ public class InitTargetExecuteFilter implements ExecuteFilter {
 	private void copyProperties(ExecuteChain chain, Class<?> parameType, Object[] parameter, Object target)
 			throws Exception {
 		if (parameType == null) {
-			return ;
+			return;
 		}
 		Map<String, Property> props = new TreeMap<>(ClassUtils.properties(parameType));
 		Map<String, Object> values = new HashMap<>();
@@ -115,17 +117,18 @@ public class InitTargetExecuteFilter implements ExecuteFilter {
 	 * @return 构建参数及输入参数分组
 	 */
 	private List<?>[] groupParameters(Parameter[] parameters, Object[] params) {
-		ArrayList<Object> list = new ArrayList<>();//构造方法参数
+		ArrayList<Object> list = new ArrayList<>();// 构造方法参数
 		int k = 0;
 		for (Parameter parameter : parameters) {
-			Annotation[] annotations=AnnotationUtils.getAnnotationByMeta(parameter.getAnnotations(), ParameterInject.class);
-			if (annotations.length>0) {
+			Annotation[] annotations = AnnotationUtils.getAnnotationByMeta(parameter.getAnnotations(),
+					ParameterInject.class);
+			if (annotations.length > 0) {
 				list.add(helper.getInjectParameter(parameter.getType(), annotations[0]));
 			} else {
 				list.add(params[k++]);
 			}
 		}
-		ArrayList<Object> list2 = new ArrayList<>();//Input注解的属性
+		ArrayList<Object> list2 = new ArrayList<>();// Input注解的属性
 		for (int i = k, m = params.length; i < m; i++) {
 			list2.add(params[i]);
 		}
@@ -186,8 +189,8 @@ public class InitTargetExecuteFilter implements ExecuteFilter {
 
 		protected Object buildBoolean(Property property, Object target, Class<?> type, Object value,
 				Annotation annotation) throws Exception {
-			if (validate(type,property.getName(), Input.class.equals(annotation.annotationType()) ? ((Input) annotation).value()[0]
-					: (Prop) annotation, value)) {
+			if (validate(type, property.getName(), Input.class.equals(annotation.annotationType())
+					? ((Input) annotation).value()[0] : (Prop) annotation, value)) {
 				return value;
 			}
 			return null;
@@ -195,18 +198,18 @@ public class InitTargetExecuteFilter implements ExecuteFilter {
 
 		protected Object buildBytes(Property property, Object target, Class<?> type, Object value,
 				Annotation annotation) throws Exception {
-			if (validate(type,property.getName(), Input.class.equals(annotation.annotationType()) ? ((Input) annotation).value()[0]
-					: (Prop) annotation, value)) {
-				return ((String)value).getBytes();
+			if (validate(type, property.getName(), Input.class.equals(annotation.annotationType())
+					? ((Input) annotation).value()[0] : (Prop) annotation, value)) {
+				return ((String) value).getBytes();
 			}
 			return null;
 		}
 
 		protected Object buildCharacter(Property property, Object target, Class<?> type, Object value,
 				Annotation annotation) throws Exception {
-			if (validate(type,property.getName(), Input.class.equals(annotation.annotationType()) ? ((Input) annotation).value()[0]
-					: (Prop) annotation, value)) {
-				return ((String)value).charAt(0);
+			if (validate(type, property.getName(), Input.class.equals(annotation.annotationType())
+					? ((Input) annotation).value()[0] : (Prop) annotation, value)) {
+				return ((String) value).charAt(0);
 			}
 			return null;
 		}
@@ -215,7 +218,7 @@ public class InitTargetExecuteFilter implements ExecuteFilter {
 				throws Exception {
 			Prop prop = Input.class.equals(annotation.annotationType()) ? ((Input) annotation).value()[0]
 					: (Prop) annotation;
-			if (!validate(type,property.getName(), prop, value)) {
+			if (!validate(type, property.getName(), prop, value)) {
 				return null;
 			}
 			if (prop.pattern().length() > 0) {
@@ -231,7 +234,7 @@ public class InitTargetExecuteFilter implements ExecuteFilter {
 				throws Exception {
 			Prop prop = Input.class.equals(annotation.annotationType()) ? ((Input) annotation).value()[0]
 					: (Prop) annotation;
-			if (validate(type,property.getName(), prop, value)) {
+			if (validate(type, property.getName(), prop, value)) {
 				return Enum.valueOf((Class<Enum>) type, (String) value);
 			}
 			return null;
@@ -241,7 +244,7 @@ public class InitTargetExecuteFilter implements ExecuteFilter {
 				Annotation annotation) throws Exception {
 			Prop prop = Input.class.equals(annotation.annotationType()) ? ((Input) annotation).value()[0]
 					: (Prop) annotation;
-			if (!validate(type,property.getName(), prop, value)) {
+			if (!validate(type, property.getName(), prop, value)) {
 				return null;
 			}
 			if (prop.pattern().length() > 0) {
@@ -285,7 +288,7 @@ public class InitTargetExecuteFilter implements ExecuteFilter {
 			return buildList(property, target, type, value, annotation);
 		}
 
-		@SuppressWarnings({"unchecked" })
+		@SuppressWarnings({ "unchecked" })
 		protected Object buildMap(Property property, Object target, Class<?> type, Object value, Annotation annotation)
 				throws Exception {
 			Class<?> generic = getGeneric(property.getField(), 1);
@@ -332,7 +335,7 @@ public class InitTargetExecuteFilter implements ExecuteFilter {
 			return rs;
 		}
 
-		private boolean validate(Class<?> targetType,String fieldName, Prop prop, Object value) {
+		private boolean validate(Class<?> targetType, String fieldName, Prop prop, Object value) {
 			if (value == null) {
 				if (prop.required()) {
 					chain.addValidateError(fieldName + ".required");
@@ -340,20 +343,41 @@ public class InitTargetExecuteFilter implements ExecuteFilter {
 				}
 			} else if (!String.class.isInstance(value)) {
 				return true;
-			} 
-			String str=(String) value;
-			if(str.length()==0){
+			}
+			String str = (String) value;
+			if (str.length() == 0) {
 				if (prop.required()) {
-					chain.addValidateError(fieldName+ ".required");
+					chain.addValidateError(fieldName + ".required");
 					return false;
 				}
 				return true;
 			}
+			if (!prop.pattern().startsWith(ServiceClassAdvisor.METHOD_PREFIX)
+					&& (Number.class.isAssignableFrom(targetType) || targetType.isPrimitive())
+					&& !byte.class.equals(target) && !char.class.equals(targetType)) {
+				try {
+					int v = new BigDecimal(value.toString()).intValue();
+					if (v < prop.min()) {
+						chain.addValidateError(fieldName + ".min");
+						return false;
+					} else if (v > prop.max()) {
+						chain.addValidateError(fieldName + ".max");
+						return false;
+					}
+				} catch (NumberFormatException e) {
+					chain.addValidateError(fieldName + ".number");
+					return false;
+				}
+			}
 			if (prop.maxLength() > 0 && str.length() > prop.maxLength()) {
 				chain.addValidateError(fieldName + ".maxLength");
 				return false;
+			} else if (prop.minLength() > 0 && str.length() < prop.minLength()) {
+				chain.addValidateError(fieldName + ".minLength");
+				return false;
 			} else if (prop.pattern().length() > 0 && !prop.pattern().startsWith(ServiceClassAdvisor.METHOD_PREFIX)) {
-				if (!targetType.isPrimitive()&& !Number.class.isAssignableFrom(targetType) && !Date.class.isAssignableFrom(targetType)
+				if (!targetType.isPrimitive() && !Number.class.isAssignableFrom(targetType)
+						&& !Date.class.isAssignableFrom(targetType)
 						&& !Pattern.matches(prop.pattern(), (String) value)) {
 					chain.addValidateError(fieldName + ".pattern");
 					return false;
@@ -366,7 +390,7 @@ public class InitTargetExecuteFilter implements ExecuteFilter {
 				Annotation annotation) throws Exception {
 			Prop prop = Input.class.equals(annotation.annotationType()) ? ((Input) annotation).value()[0]
 					: (Prop) annotation;
-			if (!validate(type,property.getName(), prop, value)) {
+			if (!validate(type, property.getName(), prop, value)) {
 				return null;
 			}
 			if (Number.class.isInstance(value)) {

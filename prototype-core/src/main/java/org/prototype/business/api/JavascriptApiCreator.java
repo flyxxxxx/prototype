@@ -219,6 +219,9 @@ public class JavascriptApiCreator implements ApiCreator<List<JavascriptApiCreato
 			rs.name = name;
 			rs.type = type.getSimpleName();
 			rs.required=prop.required();
+			rs.min=prop.min();
+			rs.max=prop.max();
+			rs.minLength=prop.minLength();
 			rs.maxLength = prop.maxLength();
 			rs.pattern = prop.pattern().length() > 0 && !prop.pattern().startsWith(ServiceClassAdvisor.METHOD_PREFIX)
 					? prop.pattern() : null;
@@ -233,6 +236,9 @@ public class JavascriptApiCreator implements ApiCreator<List<JavascriptApiCreato
 		private String type;
 		private String generic;
 		private boolean required;
+		private int min;
+		private int max;
+		private int minLength;
 		private int maxLength;
 		private String pattern;
 		private List<Validation> childs;

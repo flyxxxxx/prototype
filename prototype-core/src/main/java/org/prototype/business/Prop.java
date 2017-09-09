@@ -40,6 +40,25 @@ public @interface Prop {
 	String desc();
 
 	/**
+	 * 数值的最小值(默认为整数最小值)
+	 * @return 数值的最小值
+	 */
+	int min() default Integer.MIN_VALUE;
+	
+	/**
+	 * 数值的最小值(默认为整数最大值)
+	 * @return 数值的最大值
+	 */
+	int max() default Integer.MAX_VALUE;
+
+	/**
+	 * 输入数据的最小长度，作为输入参数时才需要，作为输出时仅作为API文档的参考.
+	 * 对于数组、集合和映射，是指每个元素的最小长度.
+	 * @return 输入数据的最小长度
+	 */
+	int minLength() default 0;
+
+	/**
 	 * 输入数据的最大长度，作为输入参数时才需要，作为输出时仅作为API文档的参考.
 	 * 对于数组、集合和映射，是指每个元素的最大长度.
 	 * @return 输入数据的最大长度
