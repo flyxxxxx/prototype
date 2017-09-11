@@ -18,7 +18,6 @@ package org.prototype.core;
 import java.util.Locale;
 import java.util.concurrent.atomic.AtomicLong;
 
-import lombok.Data;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -137,11 +136,16 @@ public class PrototypeStatus implements Cloneable {
 	 * @author flyxxxxx@163.com
 	 *
 	 */
-	@Data
+	@Getter@Setter
 	public static class TransactionStatus {
 		/**
 		 * 只读
 		 */
 		private boolean readOnly = false;
+		
+		/**
+		 * 数据分区
+		 */
+		private String partion;
 	}
 }

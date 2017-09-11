@@ -7,6 +7,7 @@ import org.prototype.annotation.Catch;
 import org.prototype.annotation.Message;
 import org.prototype.core.PrototypeStatus;
 import org.springframework.context.MessageSource;
+import org.springframework.transaction.annotation.Transactional;
 
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
@@ -51,7 +52,7 @@ public class Business {
 	 * 子类如果重写此方法，并定义了Chain/OverloadAsync注解，则业务类的执行按子类的这两个注解为准（如果仅定义了其中一个注解，则另一个注解由父类定义）
 	 */
 	@Catch // 将异常交给executeException方法处理
-	// @Transactional 在此处定义事务表示所有业务方法（除异步方法外）均在一个事务中处理事务.默认情况下各业务方法有自己的事务管理.
+	@Transactional// 在此处定义事务表示所有业务方法（除异步方法外）均在一个事务中处理事务.默认情况下各业务方法有自己的事务管理.
 	public void execute() {
 		// do nothing
 	}

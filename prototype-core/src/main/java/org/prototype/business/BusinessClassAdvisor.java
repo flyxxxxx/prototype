@@ -44,7 +44,7 @@ public class BusinessClassAdvisor implements ClassAdvisor {
 
 	@Override
 	public void beforeLoad(ClassBuilder builder, Errors errors) {
-		BusinessDefine current = builder.getAnnotation(BusinessDefine.class);
+		BusinessDefine current = builder.getAnnotation(BusinessDefine.class);//TODO 未给子类方法加Transactional等
 		if (current == null) {
 			return;
 		}

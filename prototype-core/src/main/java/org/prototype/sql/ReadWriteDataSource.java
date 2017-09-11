@@ -15,84 +15,58 @@
  */
 package org.prototype.sql;
 
-import java.io.PrintWriter;
-import java.sql.Connection;
-import java.sql.SQLException;
-import java.sql.SQLFeatureNotSupportedException;
-import java.util.logging.Logger;
+import java.util.HashMap;
+import java.util.Map;
 
 import javax.sql.DataSource;
 
 import org.prototype.core.PrototypeStatus;
+import org.prototype.core.PrototypeStatus.TransactionStatus;
+import org.springframework.jdbc.datasource.lookup.AbstractRoutingDataSource;
+import org.springframework.util.Assert;
+
+import lombok.Setter;
 
 /**
  * 读写数据源. <br>
  * 自动根据事务状态切换读或写数据源.
+ * 
  * @author lj
  *
  */
-public class ReadWriteDataSource implements DataSource {
-	
+public class ReadWriteDataSource extends AbstractRoutingDataSource {
+
+	private static final String[] NAMES = { "writeDataSource", "readDataSource" };
+
+	@Setter
+	private DataSource writeDataSource;
+	@Setter
 	private DataSource readDataSource;
 
-	private DataSource writeDataSource;
-	
-	public ReadWriteDataSource(DataSource readDataSource,DataSource writeDataSource){
-		this.readDataSource=readDataSource;
-		this.writeDataSource=writeDataSource;
+	/**
+	 * 准备读写分离数据源
+	 */
+	@Override
+	public void afterPropertiesSet() {
+		Assert.notNull(writeDataSource);
+		Assert.notNull(readDataSource);
+		Map<Object, Object> targetDataSources = new HashMap<>();
+		targetDataSources.put(writeDataSource, writeDataSource);
+		targetDataSources.put(readDataSource, readDataSource);
+		setTargetDataSources(targetDataSources);
+		super.afterPropertiesSet();
 	}
 
+	/**
+	 * 根据线程变量PrototypeStatus中的读写区分数据源
+	 */
 	@Override
-	public PrintWriter getLogWriter() throws SQLException {
-		return readDataSource.getLogWriter();
-	}
-
-	@Override
-	public void setLogWriter(PrintWriter out) throws SQLException {
-		writeDataSource.setLogWriter(out);
-		readDataSource.setLogWriter(out);
-	}
-
-	@Override
-	public void setLoginTimeout(int seconds) throws SQLException {
-		writeDataSource.setLoginTimeout(seconds);
-		readDataSource.setLoginTimeout(seconds);
-	}
-
-	@Override
-	public int getLoginTimeout() throws SQLException {
-		return readDataSource.getLoginTimeout();
-	}
-
-	@Override
-	public Logger getParentLogger() throws SQLFeatureNotSupportedException {
-		return readDataSource.getParentLogger();
-	}
-
-	@Override
-	public <T> T unwrap(Class<T> iface) throws SQLException {
-		return readDataSource.unwrap(iface);
-	}
-
-	@Override
-	public boolean isWrapperFor(Class<?> iface) throws SQLException {
-		return readDataSource.isWrapperFor(iface);
-	}
-
-	@Override
-	public Connection getConnection() throws SQLException {
-		if(PrototypeStatus.getStatus().getTransaction().isReadOnly()){
-			return readDataSource.getConnection();
-		}
-		return writeDataSource.getConnection();
-	}
-
-	@Override
-	public Connection getConnection(String username, String password) throws SQLException {
-		if(PrototypeStatus.getStatus().getTransaction().isReadOnly()){
-			return readDataSource.getConnection(username,password);
-		}
-		return writeDataSource.getConnection(username,password);
+	protected Object determineCurrentLookupKey() {
+		PrototypeStatus status = PrototypeStatus.getStatus();
+		Assert.notNull(status);
+		TransactionStatus trans = status.getTransaction();
+		Assert.notNull(trans);
+		return trans.isReadOnly() ? NAMES[1] : NAMES[0];
 	}
 
 }

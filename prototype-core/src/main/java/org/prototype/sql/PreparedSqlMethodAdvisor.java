@@ -14,6 +14,8 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import javax.annotation.Resource;
 
@@ -22,11 +24,14 @@ import org.prototype.core.MethodAdvisor;
 import org.prototype.core.MethodBuilder;
 import org.prototype.core.MethodChain;
 import org.prototype.core.MethodFilter;
+import org.prototype.core.PrototypeStatus;
+import org.prototype.core.PrototypeStatus.TransactionStatus;
 import org.prototype.reflect.ClassUtils;
 import org.prototype.reflect.MethodUtils;
 import org.prototype.reflect.Property;
 import org.springframework.core.ResolvableType;
 import org.springframework.stereotype.Component;
+import org.springframework.util.Assert;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -56,7 +61,7 @@ public class PreparedSqlMethodAdvisor implements MethodAdvisor {
 			return null;
 		}
 		Class<?>[] types = builder.getParameterTypes();
-		int length=types.length;
+		int length = types.length;
 		if (length < 2) {
 			errors.add("preparedsql.method.params", builder.toString());
 			return null;
@@ -65,34 +70,36 @@ public class PreparedSqlMethodAdvisor implements MethodAdvisor {
 		if (!Connection.class.equals(types[0])) {
 			rs = false;
 		}
-		if(SQLBuilder.class.equals(types[1])){
+		if (SQLBuilder.class.equals(types[1])) {
 			if (length > 2) {
 				rs = false;
 			}
-		}else if(String.class.equals(types[1])){
-			if(length==3){
-				if(!Object[].class.equals(types[2])){
-					rs=false;
+		} else if (String.class.equals(types[1])) {
+			if (length == 3) {
+				if (!Object[].class.equals(types[2])) {
+					rs = false;
 				}
-			}else if(length>3){
+			} else if (length > 3) {
 				rs = false;
 			}
-		}else{
+		} else {
 			rs = false;
 		}
-		if(!rs){
-			errors.add("preparedsql.method.params", builder.toString(),builder.getName());
+		if (!rs) {
+			errors.add("preparedsql.method.params", builder.toString(), builder.getName());
 		}
-		return rs ? new PreparedSqlMethodFilter(sql) : null;
+		return rs ? new PreparedSqlMethodFilter(sql, builder.getAnnotation(Partition.class)) : null;
 	}
 
 	// TODO 未解决关联ID的绑定问题
 	private class PreparedSqlMethodFilter implements MethodFilter<PreparedSql> {
 
 		private PreparedSql preparedSql;
+		private Pattern pattern;
 
-		public PreparedSqlMethodFilter(PreparedSql preparedSql) {
+		public PreparedSqlMethodFilter(PreparedSql preparedSql, Partition partition) {
 			this.preparedSql = preparedSql;
+			this.pattern = partition == null ? null : Pattern.compile(" " + partition.value() + "\\s*(=|(in)).*\\s*");
 		}
 
 		@Override
@@ -103,7 +110,7 @@ public class PreparedSqlMethodAdvisor implements MethodAdvisor {
 			Object[] parameters = null;
 			if (String.class.isInstance(object)) {
 				sql = (String) object;
-				parameters = args.length==3?(Object[]) args[2]:new Object[0];
+				parameters = args.length == 3 ? (Object[]) args[2] : new Object[0];
 			} else {
 				SQLBuilder builder = (SQLBuilder) object;
 				sql = builder.getSql();
@@ -117,6 +124,7 @@ public class PreparedSqlMethodAdvisor implements MethodAdvisor {
 
 		private Object execute(MethodChain chain, Connection connection, String sql, Object[] parameters)
 				throws Exception {
+			setPartition(sql, parameters);
 			try (PreparedStatement ps = connection.prepareStatement(sql)) {
 				if (parameters.length > 0) {
 					int k = 1;
@@ -126,13 +134,61 @@ public class PreparedSqlMethodAdvisor implements MethodAdvisor {
 				}
 				switch (preparedSql.type()) {
 				case SELECT:
-					return getSelectResult(ps,sql, chain);
+					return getSelectResult(ps, sql, chain);
 				case INSERT:
 					return getInsertResult(ps, chain.getMethod().getReturnType());
 				default:
 					return getUpdateResult(ps, chain.getMethod().getReturnType());
 				}
 			}
+		}
+
+		private void setPartition(String sql, Object[] parameters) {
+			if (pattern == null) {
+				return;
+			}
+			TransactionStatus trans = PrototypeStatus.getStatus().getTransaction();
+			Assert.notNull(trans);
+			if (trans.getPartion() != null) {
+				return;
+			}
+			Matcher matcher = pattern.matcher(sql);
+			if (!matcher.find()) {
+				return;
+			}
+			String str = sql.substring(matcher.start(), matcher.end()).trim();
+			int m = str.indexOf('=');
+			int n = m == -1 ? str.indexOf(" in") : -1;
+			boolean in = m == -1;
+			String value = in?str.substring(n+3):str.substring(m+1);
+			if (value.indexOf('?') == -1) {
+				trans.setPartion(value);
+			} else {
+				int index = countParameters(sql.substring(0, matcher.start()));
+				Object parameter = parameters[index];
+				if (parameter == null) {
+					return;
+				}
+				if (!in) {
+					trans.setPartion(parameter.toString());
+				} else if (Collection.class.isInstance(parameter)) {// where in
+					trans.setPartion(((Collection<?>) parameter).iterator().next().toString());
+				} else {// where in
+					String v = parameter.toString().split("[,]")[0];
+					trans.setPartion(v.charAt(0) == '\'' ? (v.substring(1, v.length() - 1)) : v);
+				}
+			}
+			log.debug("Prepared sql : {} , use partition {}", sql, trans.getPartion());
+		}
+
+		private int countParameters(String sql) {
+			int count = 0;
+			int k = 0;
+			while ((k = sql.indexOf('?', k)) != -1) {
+				count++;
+				k++;
+			}
+			return count;
 		}
 
 		private void setParameter(PreparedStatement ps, int index, Object value) throws SQLException {
@@ -224,15 +280,15 @@ public class PreparedSqlMethodAdvisor implements MethodAdvisor {
 			throw new SQLException("Return type must be void/boolean/int/long ");
 		}
 
-		private Object getSelectResult(PreparedStatement ps,String sql, MethodChain chain) throws Exception {
+		private Object getSelectResult(PreparedStatement ps, String sql, MethodChain chain) throws Exception {
 			Class<?> returnType = chain.getMethod().getReturnType();
 			try (ResultSet set = ps.executeQuery()) {
 				if (Collection.class.isAssignableFrom(returnType)) {
-					Collection<?> rs= getCollectionResult(set, returnType, chain.getGenericReturnType());
+					Collection<?> rs = getCollectionResult(set, returnType, chain.getGenericReturnType());
 					log.debug("Execute sql : {} , total collection : {}", sql, rs.size());
 					return rs;
 				} else if (Map.class.isAssignableFrom(returnType)) {
-					Map<?,?> map= getMapResult(set, returnType);
+					Map<?, ?> map = getMapResult(set, returnType);
 					log.debug("Execute sql : {} , total map : {}", sql, map.size());
 					return map;
 				} else if (returnType.isArray()) {
@@ -240,8 +296,8 @@ public class PreparedSqlMethodAdvisor implements MethodAdvisor {
 					log.debug("Execute sql : {} , total array : {}", sql, list.size());
 					return list.toArray((Object[]) Array.newInstance(returnType.getComponentType(), list.size()));
 				} else {
-					Object rs= getSingleResult(set, returnType);
-					log.debug("Execute sql : {} , single result : {}", sql, rs!=null);
+					Object rs = getSingleResult(set, returnType);
+					log.debug("Execute sql : {} , single result : {}", sql, rs != null);
 					return rs;
 				}
 			}

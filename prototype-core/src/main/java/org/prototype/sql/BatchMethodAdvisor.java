@@ -96,6 +96,7 @@ public class BatchMethodAdvisor implements MethodAdvisor {
 
 		private Batch batch;
 
+		//TODO 未支持数据分区
 		public BatchMethodFilter(Batch batch) {
 			this.batch = batch;
 		}

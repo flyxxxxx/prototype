@@ -61,6 +61,7 @@ public class PreparedBusiness extends Business {
 	}
 
 	@PreparedSql(type = StatementType.UPDATE)
+	@Partition("id")
 	private int updateDict(Connection connection, String sql, Object[] params) {
 		return 0;
 	}
