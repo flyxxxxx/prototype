@@ -9,7 +9,7 @@ import org.prototype.core.Prototype;
 
 /**
  * 当天0点业务
- * @author lijin
+ * @author flyxxxxx@163.com
  *
  */
 

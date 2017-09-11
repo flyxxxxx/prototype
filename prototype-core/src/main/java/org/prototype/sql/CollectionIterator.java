@@ -55,12 +55,13 @@ public abstract class CollectionIterator<T> implements Iterator<Object[]> {
 	public boolean hasNext() {
 		return index < list.size();
 	}
-
+	
 	/**
-	 * 重置索引，可从循环的开始再次进行循环
+	 * 获得第一行数据的SQL参数
+	 * @return 第一行数据的SQL参数
 	 */
-	public void reset() {
-		index = 0;
+	public Object[] getFirstParameters(){
+		return list.isEmpty()?null:next(list.get(0));
 	}
 
 	/**

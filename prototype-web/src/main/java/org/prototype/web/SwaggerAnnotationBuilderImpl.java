@@ -20,7 +20,7 @@ import springfox.documentation.builders.ApiInfoBuilder;
 /**
  * SwaggerAnnotationBuilder实现类
  * 
- * @author lijin
+ * @author flyxxxxx@163.com
  *
  */
 @Component

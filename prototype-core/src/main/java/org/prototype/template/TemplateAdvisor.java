@@ -59,11 +59,16 @@ public class TemplateAdvisor implements MethodAdvisor {
 		return rs?new TemplateMethodFilter(template):null;
 	}
 
-
-	private static Map<String, Object> getParametersAsMap(Object[] args, String[] parameterNames) {
+	/**
+	 * 获取参数名与值映射
+	 * @param args  参数值
+	 * @param parameterNames 参数名
+	 * @return
+	 */
+	private static Map<String, Object> getParametersAsMap(Object[] args, String[] names) {
 		Map<String, Object> map = new HashMap<>();
-		for (int i = 0, k = parameterNames.length; i < k; i++) {
-			map.put(parameterNames[i], args[i]);
+		for (int i = 0, k = names.length; i < k; i++) {
+			map.put(names[i], args[i]);
 		}
 		return map;
 	}

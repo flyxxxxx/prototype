@@ -11,7 +11,7 @@ import java.lang.annotation.Target;
  * 开启使用Spring mvc的RequestBody方式. <br>
  * 如果业务类（或启动类）未指定此注解，仅有复杂参数（对象与集合的复合类型参数）才开启RequestBody作为参数。
  * 
- * @author lijin
+ * @author flyxxxxx@163.com
  *
  */
 

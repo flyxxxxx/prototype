@@ -11,8 +11,9 @@ import org.prototype.core.ParameterInjecter;
 import org.springframework.stereotype.Component;
 
 /**
- * 获得今天0点的注解实现
- * @author lijin
+ * 获得今天0点的注解实现. <br>
+ * @see TodayZero
+ * @author flyxxxxx@163.com
  *
  */
 @Component

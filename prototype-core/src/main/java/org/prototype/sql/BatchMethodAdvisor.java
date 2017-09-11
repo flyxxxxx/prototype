@@ -8,6 +8,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.Iterator;
+import java.util.regex.Pattern;
 
 import javax.annotation.Resource;
 
@@ -22,6 +23,7 @@ import lombok.extern.slf4j.Slf4j;
 
 /**
  * 批处理注解的方法适配. <br>
+ * 
  * @author lj
  *
  */
@@ -31,56 +33,58 @@ public class BatchMethodAdvisor implements MethodAdvisor {
 
 	@Resource
 	private SqlConfiguration config;
-	
+
 	@Override
 	public MethodFilter<?> matches(MethodBuilder builder, Errors errors) {
 		Batch batch = builder.getAnnotation(Batch.class);
 		if (batch == null) {
 			return null;
 		}
-		if (batch.value().length == 0) {//调用的方法要求
+		if (batch.value().length == 0) {// 调用的方法要求
 			errors.add("batch.required", builder.toString());
 			return null;
 		}
 		boolean rs = true;
-		if (hasParameter(builder.getParameterTypes(),Connection.class)) {//调用的方法要求
+		if (hasParameter(builder.getParameterTypes(), Connection.class)) {// 调用的方法要求
 			errors.add("batch.connection.required", builder.toString());
 			return null;
 		}
 		for (String value : batch.value()) {
 			MethodBuilder mi = builder.getClassBuilder().findUniqueMethod(value, errors, Batch.class);
-			if (mi == null) {//调用的方法不存在
-				errors.add("batch.method.notfound", builder.toString(),value);
+			if (mi == null) {// 调用的方法不存在
+				errors.add("batch.method.notfound", builder.toString(), value);
 				rs = false;
 				continue;
 			}
-			String returnType = mi.getReturnType();//返回值类型要求
-			if(!returnType.equals(CollectionIterator.class.getName())&&!returnType.equals(InsertIterator.class.getName())){
-				errors.add("batch.method.return", builder.toString(),mi.toString());
+			String returnType = mi.getReturnType();// 返回值类型要求
+			if (!returnType.equals(CollectionIterator.class.getName())
+					&& !returnType.equals(InsertIterator.class.getName())) {
+				errors.add("batch.method.return", builder.toString(), mi.toString());
 				rs = false;
 			}
-			if(mi.getParameterTypes().length>0){
-				errors.add("batch.method.parameters", builder.toString(),mi.toString());
+			if (mi.getParameterTypes().length > 0) {
+				errors.add("batch.method.parameters", builder.toString(), mi.toString());
 				rs = false;
 			}
 			BatchSql sql = mi.getAnnotation(BatchSql.class);
-			if (sql == null) {//必须有注解BatchSql
-				errors.add("batch.batchsql.notfound", builder.toString(),mi.toString());
+			if (sql == null) {// 必须有注解BatchSql
+				errors.add("batch.batchsql.notfound", builder.toString(), mi.toString());
 				rs = false;
 			}
 		}
-		return rs ? new BatchMethodFilter(batch) : null;
+		return rs ? new BatchMethodFilter(batch, builder.getAnnotation(Partition.class)) : null;
 	}
 
 	/**
 	 * 是否有指定类型参数
+	 * 
 	 * @param parameterTypes
 	 * @param type
 	 * @return
 	 */
 	private boolean hasParameter(Class<?>[] parameterTypes, Class<?> type) {
-		for(Class<?> clazz:parameterTypes){
-			if(clazz==type){
+		for (Class<?> clazz : parameterTypes) {
+			if (clazz == type) {
 				return true;
 			}
 		}
@@ -89,16 +93,18 @@ public class BatchMethodAdvisor implements MethodAdvisor {
 
 	/**
 	 * 批处理注解方法过滤
+	 * 
 	 * @author lj
 	 *
 	 */
 	private class BatchMethodFilter implements MethodFilter<Batch> {
 
 		private Batch batch;
+		private Pattern pattern;
 
-		//TODO 未支持数据分区
-		public BatchMethodFilter(Batch batch) {
+		public BatchMethodFilter(Batch batch, Partition partition) {
 			this.batch = batch;
+			this.pattern = SqlUtil.getPartitionPattern(partition);
 		}
 
 		@Override
@@ -115,9 +121,13 @@ public class BatchMethodAdvisor implements MethodAdvisor {
 
 		/**
 		 * 执行批处理
-		 * @param chain 方法链
-		 * @param args 参数
-		 * @throws Exception 异常
+		 * 
+		 * @param chain
+		 *            方法链
+		 * @param args
+		 *            参数
+		 * @throws Exception
+		 *             异常
 		 */
 		private void doBatch(MethodChain chain, Object[] args) throws Exception {
 			Connection conn = (Connection) args[0];
@@ -135,7 +145,12 @@ public class BatchMethodAdvisor implements MethodAdvisor {
 			try {
 				for (String s : sql) {
 					ps[k] = conn.prepareStatement(s, Statement.RETURN_GENERATED_KEYS);
-					prepared(ps[k], (Iterator<?>) mi[k].invoke(chain.getTarget(),new Object[0]), batchSize);
+					CollectionIterator<?> iterator = (CollectionIterator<?>) mi[k].invoke(chain.getTarget(),
+							new Object[0]);
+					if (k == 0) {
+						SqlUtil.setPartition(pattern, sql[0], iterator.getFirstParameters());
+					}
+					prepared(ps[k], iterator, batchSize);
 					k++;
 				}
 			} finally {

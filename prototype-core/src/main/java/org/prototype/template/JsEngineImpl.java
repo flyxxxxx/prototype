@@ -9,16 +9,34 @@ import javax.script.ScriptEngineManager;
 
 import org.springframework.stereotype.Component;
 
+/**
+ * javascript引擎实现. <br>
+ * 
+ * @author flyxxxxx@163.com
+ *
+ */
 @Component
 public class JsEngineImpl implements Engine{
     private final static String FUNCTION_NAME = "internal_function_name";
 	
+    /**
+     * 类型：js
+     */
 	public static final String TYPE="js";
+	/**
+	 * 脚本引擎
+	 */
     private Compilable scriptEngine;
 
+    /**
+     * 构造，需要JavaScript引擎支持(JDK6)
+     */
     public JsEngineImpl() {
         scriptEngine = (Compilable) new ScriptEngineManager().getEngineByName("JavaScript");
     }
+    /**
+     * 返回{@link #TYPE}
+     */
 	@Override
 	public String getType() {
 		return TYPE;
@@ -41,6 +59,12 @@ public class JsEngineImpl implements Engine{
         return renderText(sb.toString(),properties);
 	}
 
+	/**
+	 * 渲染数据
+	 * @param template 模板
+	 * @param properties 属性名与值的映射
+	 * @return 渲染后的内容
+	 */
     private String renderText(String template, Map<String, Object> properties){
         try {
             // 编译JS脚本

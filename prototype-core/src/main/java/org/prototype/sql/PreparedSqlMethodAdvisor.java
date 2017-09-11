@@ -14,7 +14,6 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import javax.annotation.Resource;
@@ -24,14 +23,11 @@ import org.prototype.core.MethodAdvisor;
 import org.prototype.core.MethodBuilder;
 import org.prototype.core.MethodChain;
 import org.prototype.core.MethodFilter;
-import org.prototype.core.PrototypeStatus;
-import org.prototype.core.PrototypeStatus.TransactionStatus;
 import org.prototype.reflect.ClassUtils;
 import org.prototype.reflect.MethodUtils;
 import org.prototype.reflect.Property;
 import org.springframework.core.ResolvableType;
 import org.springframework.stereotype.Component;
-import org.springframework.util.Assert;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -98,7 +94,7 @@ public class PreparedSqlMethodAdvisor implements MethodAdvisor {
 
 		public PreparedSqlMethodFilter(PreparedSql preparedSql, Partition partition) {
 			this.preparedSql = preparedSql;
-			this.pattern = partition == null ? null : Pattern.compile(" " + partition.value() + "\\s*(=|(in)).*\\s*");
+			this.pattern=SqlUtil.getPartitionPattern(partition);
 		}
 
 		@Override
@@ -123,7 +119,7 @@ public class PreparedSqlMethodAdvisor implements MethodAdvisor {
 
 		private Object execute(MethodChain chain, Connection connection, String sql, Object[] parameters)
 				throws Exception {
-			setPartition(sql, parameters);
+			SqlUtil.setPartition(pattern,sql, parameters);
 			try (PreparedStatement ps = connection.prepareStatement(sql)) {
 				if (parameters.length > 0) {
 					int k = 1;
@@ -141,55 +137,6 @@ public class PreparedSqlMethodAdvisor implements MethodAdvisor {
 				}
 			}
 		}
-
-		private void setPartition(String sql, Object[] parameters) {
-			if (pattern == null) {
-				return;
-			}
-			TransactionStatus trans = PrototypeStatus.getStatus().getTransaction();
-			Assert.notNull(trans);
-			if (trans.getPartion() != null) {
-				return;
-			}
-			Matcher matcher = pattern.matcher(sql);
-			if (!matcher.find()) {
-				return;
-			}
-			String str = sql.substring(matcher.start(), matcher.end()).trim();
-			int m = str.indexOf('=');
-			int n = m == -1 ? str.indexOf(" in") : -1;
-			boolean in = m == -1;
-			String value = in?str.substring(n+3):str.substring(m+1);
-			if (value.indexOf('?') == -1) {
-				trans.setPartion(value);
-			} else {
-				int index = countParameters(sql.substring(0, matcher.start()));
-				Object parameter = parameters[index];
-				if (parameter == null) {
-					return;
-				}
-				if (!in) {
-					trans.setPartion(parameter.toString());
-				} else if (Collection.class.isInstance(parameter)) {// where in
-					trans.setPartion(((Collection<?>) parameter).iterator().next().toString());
-				} else {// where in
-					String v = parameter.toString().split("[,]")[0];
-					trans.setPartion(v.charAt(0) == '\'' ? (v.substring(1, v.length() - 1)) : v);
-				}
-			}
-			log.debug("Prepared sql : {} , use partition {}", sql, trans.getPartion());
-		}
-
-		private int countParameters(String sql) {
-			int count = 0;
-			int k = 0;
-			while ((k = sql.indexOf('?', k)) != -1) {
-				count++;
-				k++;
-			}
-			return count;
-		}
-
 		private void setParameter(PreparedStatement ps, int index, Object value) throws SQLException {
 			if (value == null) {
 				ps.setObject(index, null);

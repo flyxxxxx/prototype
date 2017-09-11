@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.RequestMethod;
 
 /**
  * 动态路径
- * @author lijin
+ * @author flyxxxxx@163.com
  *
  */
 @ServiceDefine( value = "用户明细")

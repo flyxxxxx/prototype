@@ -9,6 +9,7 @@ import java.lang.annotation.Target;
 /**
  * 豫处理的SQL执行. <br>
  * 
+ * 与{@link Partition}注解在同一方法中使用，可以对批处理进行数据分区处理（需要多数据源支持）；一个线程中只能有一个数据分区.
  * <pre>
  * 例1：
  * void method1(Connection conn , ...){
