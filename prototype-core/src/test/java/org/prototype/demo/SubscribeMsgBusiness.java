@@ -3,6 +3,7 @@ package org.prototype.demo;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.prototype.annotation.Subscribe;
+import org.springframework.context.ApplicationContext;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -20,8 +21,8 @@ public class SubscribeMsgBusiness {
 	 */
 	public static AtomicInteger value=new AtomicInteger();
 	
-	public void onMessage(int value){
-		log.info("Reveive msg : "+value);
+	public void onMessage(int value,ApplicationContext context){
+		log.info("Reveive msg : "+value+" , beans : "+context.getBeanDefinitionCount());
 		SubscribeMsgBusiness.value.incrementAndGet();
 	}
 	

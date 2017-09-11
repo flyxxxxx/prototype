@@ -18,6 +18,8 @@ package org.prototype.annotation;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 
+import javax.annotation.Resource;
+
 import org.prototype.core.ChainOrder;
 import org.prototype.core.Errors;
 import org.prototype.core.MethodAdvisor;
@@ -25,6 +27,7 @@ import org.prototype.core.MethodBuilder;
 import org.prototype.core.MethodChain;
 import org.prototype.core.MethodFilter;
 import org.prototype.core.PrototypeStatus;
+import org.prototype.inject.InjectHelper;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
@@ -40,6 +43,9 @@ import lombok.extern.slf4j.Slf4j;
 @Component
 @Slf4j
 public class CatchMethodAdvisor implements MethodAdvisor {
+
+	@Resource
+	private InjectHelper helper;
 
 	/**
 	 * 要求异常处理方法以被捕获异常方法名为前缀，方法返回类型一致，参数只允许是一个异常类型。
@@ -77,8 +83,17 @@ public class CatchMethodAdvisor implements MethodAdvisor {
 	 */
 	private boolean checkExceptionCatch(String returnType, MethodBuilder mb, Errors errors) {
 		Class<?>[] parameterTypes = mb.getParameterTypes();
-		boolean rs = true;
-		if (parameterTypes.length != 1 || !Throwable.class.isAssignableFrom(parameterTypes[0])) {
+		boolean rs = false;
+		int k=0;
+		for (Class<?> type : parameterTypes) {
+			if (Throwable.class.isAssignableFrom(type)
+					|| helper.enableInject(type, mb.getParameterAnnotations(k), true, errors)) {
+				rs = true;
+				break;
+			}
+			k++;
+		}
+		if (!rs) {
 			// 处理方法只能有一个参数并且是Throwable的子类型
 			errors.add("catch.exception.params.required", mb.toString());
 			rs = false;
@@ -93,10 +108,11 @@ public class CatchMethodAdvisor implements MethodAdvisor {
 
 	@Order(ChainOrder.HIGH)
 	class CatchMethodFilter implements MethodFilter<Catch> {
-		
+
 		private Catch c;
-		public CatchMethodFilter(Catch c){
-			this.c=c;
+
+		public CatchMethodFilter(Catch c) {
+			this.c = c;
 		}
 
 		/**
@@ -104,7 +120,8 @@ public class CatchMethodAdvisor implements MethodAdvisor {
 		 */
 		@Override
 		public Object doFilter(Object[] args, MethodChain chain) throws Exception {
-			log.debug("Business {} catch exception for method : {}", PrototypeStatus.getStatus().getId(),chain.getMethod());
+			log.debug("Business {} catch exception for method : {}", PrototypeStatus.getStatus().getId(),
+					chain.getMethod());
 			try {
 				return chain.doFilter(args);
 			} catch (InvocationTargetException e) {
@@ -122,22 +139,26 @@ public class CatchMethodAdvisor implements MethodAdvisor {
 		/**
 		 * 处理异常
 		 * 
-		 * @param chain 方法链
-		 * @param args 参数
-		 * @param e 异常
+		 * @param chain
+		 *            方法链
+		 * @param args
+		 *            参数
+		 * @param e
+		 *            异常
 		 * @return 异常方法的返回值
-		 * @throws Exception 调用异常
+		 * @throws Exception
+		 *             调用异常
 		 */
 		private Object onException(MethodChain chain, Object[] args, Exception e) throws Exception {
-			Method source=chain.getMethod();
+			Method source = chain.getMethod();
 			Method method = chain.findOverloadMethod(source.getName() + c.suffix(), e.getClass());
 			if (method == null) {// 未匹配到处理异常的方法，则将原异常抛出
 				throw e;
 			}
-			log.debug("Business {} catch exception to method : {}",PrototypeStatus.getStatus().getId(), method);
-			Message.getSubject().onNext(new Message(Message.CATCH,
-					source.getDeclaringClass().getName(), new Message.ExceptionMessage(chain, e)));
-			return method.invoke(chain.getTarget(), new Object[] { e });// 调用匹配的异常处理方法进行处理
+			log.debug("Business {} catch exception to method : {}", PrototypeStatus.getStatus().getId(), method);
+			Message.getSubject().onNext(new Message(Message.CATCH, source.getDeclaringClass().getName(),
+					new Message.ExceptionMessage(chain, e)));
+			return method.invoke(chain.getTarget(),helper.getInjectParameters(method,e));// 调用匹配的异常处理方法进行处理
 		}
 
 	}

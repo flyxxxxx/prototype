@@ -66,9 +66,17 @@ public class SubscribeClassAdvisor extends AbstractClassAdvisor {
 	private boolean checkMethod(MethodBuilder builder, Errors errors) {
 		boolean rs = true;
 		int num = builder.getParameterTypes().length;
-		if (num == 0 || num > 1) {
+		if (num == 0 ) {
 			errors.add("subscribe.invoke.param", builder.toString());
 			rs = false;
+		}else{
+			Class<?>[] types=builder.getParameterTypes();
+			for(int i=1,k=types.length;i<k;i++){
+				if(!helper.enableInject(types[i], builder.getParameterAnnotations(i), true, errors)){
+					errors.add("method.inject", builder.toString(),Integer.toString(i));
+					rs = false;
+				}
+			}
 		}
 		if (!"void".equals(builder.getReturnType())) {
 			errors.add("subscribe.invoke.return", builder.toString());
@@ -118,7 +126,7 @@ public class SubscribeClassAdvisor extends AbstractClassAdvisor {
 			Object content = message.getContent();
 			Method method = MethodUtils.findOverloadMethod(clazz, subscribe.onMessage(), content.getClass());
 			try {
-				method.invoke(target, new Object[] { content });
+				method.invoke(target, helper.getInjectParameters(method, content));
 			} catch (Exception e) {
 				if (e instanceof RuntimeException) {
 					throw (RuntimeException) e;

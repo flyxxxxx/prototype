@@ -15,6 +15,8 @@
  */
 package org.prototype.core;
 
+import java.lang.annotation.Annotation;
+
 /**
  * 方法构建接口
  * @author flyxxxxx@163.com
@@ -33,6 +35,13 @@ public interface MethodBuilder extends AnnotatedBuilder{
 	 * @return 方法参数注解的构建器
 	 */
 	ParameterAnnotationsBuilder getParameterAnnotationsBuilder();
+	
+	/**
+	 * 获得方法参数的注解
+	 * @param index 参数索引
+	 * @return 参数注解
+	 */
+	Annotation[] getParameterAnnotations(int index);
 	
 	/**
 	 * 获取方法名

@@ -260,6 +260,25 @@ public class InjectHelper {
 	}
 
 	/**
+	 * 获取注入的方法参数值. <br>
+	 * 与{@link #release(Method, Object[])}成对使用
+	 * 
+	 * @param method
+	 *            方法
+	 * @param args 方法中前几个参数
+	 * @return 参数值
+	 */
+	public Object[] getInjectParameters(Method method,Object... args){
+		Object[] rs = new Object[method.getParameterCount()];
+		System.arraycopy(args, 0, rs, 0, args.length);
+		Parameter[] parameters = method.getParameters();
+		for (int i=args.length,k=rs.length;i<k;i++) {
+			rs[i] = getParameter(parameters[i]);
+		}
+		return rs;
+	}
+
+	/**
 	 * 释放资源. <br>
 	 * 与{@link #getInjectParameters(Method)}成对使用
 	 * 

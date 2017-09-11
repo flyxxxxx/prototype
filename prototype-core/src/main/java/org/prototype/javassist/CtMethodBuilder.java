@@ -4,6 +4,7 @@ import java.lang.annotation.Annotation;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -281,6 +282,12 @@ class CtMethodBuilder implements MethodBuilder {
 			}
 		}
 		return rs;
+	}
+
+	@Override
+	public Annotation[] getParameterAnnotations(int index) {
+		List<Object> list=Arrays.asList(getParameterAnnotations()[index]);
+		return list.toArray(new Annotation[list.size()]);
 	}
 
 }

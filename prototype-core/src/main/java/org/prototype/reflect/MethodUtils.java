@@ -139,7 +139,7 @@ public class MethodUtils {
 	 * @param methodName
 	 *            方法名
 	 * @param parameterType
-	 *            方法唯一参数
+	 *            方法第一个参数的类型
 	 * @return 匹配的方法
 	 */
 	@SuppressWarnings("unchecked")
@@ -224,7 +224,7 @@ public class MethodUtils {
 		Map<Class<?>, Method> map = new HashMap<>();
 		for (Method method : methods) {
 			Class<?>[] types = method.getParameterTypes();
-			if (types.length == 1) {// 找到所有匹配的方法
+			if (types.length >= 1) {// 找到所有匹配的方法
 				if (types[0].isPrimitive()) {
 					types[0] = getWrapperClass(types[0]);
 				}
