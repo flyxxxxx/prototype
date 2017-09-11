@@ -91,7 +91,6 @@ public class PreparedSqlMethodAdvisor implements MethodAdvisor {
 		return rs ? new PreparedSqlMethodFilter(sql, builder.getAnnotation(Partition.class)) : null;
 	}
 
-	// TODO 未解决关联ID的绑定问题
 	private class PreparedSqlMethodFilter implements MethodFilter<PreparedSql> {
 
 		private PreparedSql preparedSql;
@@ -383,6 +382,7 @@ public class PreparedSqlMethodAdvisor implements MethodAdvisor {
 				Object v = property.getValue(object);
 				if (v == null) {
 					v = property.getType().newInstance();
+					property.setValue(object, v);
 				}
 				setProperty(v, name.substring(k + 1), value);
 			}

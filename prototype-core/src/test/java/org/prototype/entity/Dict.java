@@ -27,6 +27,8 @@ public class Dict {
 	@Column(length=20,nullable=false)
 	private String name;
 	
+	private transient User owner;
+	
 	public Dict(){}
 	public Dict(String name){
 		this.name=name;

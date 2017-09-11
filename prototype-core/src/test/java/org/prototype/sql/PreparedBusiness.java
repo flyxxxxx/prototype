@@ -17,7 +17,10 @@ public class PreparedBusiness extends Business {
 
 	void business(Connection connection) {
 		insertDict(connection, "insert into sys_dict(name) values(?)", new Object[] { "test1" });
-		List<Dict> list = select(connection, "select id,name from sys_dict");
+		List<Dict> list = select(connection, "select id,name,id from sys_dict");
+		for(Dict dict:list){
+			Assert.notNull(dict.getOwner().getId());
+		}
 		query(connection);
 		if (updateDict(connection, "update sys_dict set name=? where id=?",
 				new Object[] { "test2", list.get(0).getId() }) > 0) {
@@ -50,7 +53,7 @@ public class PreparedBusiness extends Business {
 		return null;
 	}
 
-	@PreparedSql({ "id", "name" })
+	@PreparedSql({ "id", "name","owner.id" })
 	private List<Dict> select(Connection connection, String sql) {
 		return null;
 	}
